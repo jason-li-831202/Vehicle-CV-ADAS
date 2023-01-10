@@ -5,4 +5,5 @@ Example scripts for the detection of objects using the [yolov5](https://github.c
 
 
 
-# [Inference video Example](https://www.youtube.com/watch?v=CHO0C1z5EWE) 
+## [Inference video Example](https://www.youtube.com/watch?v=CHO0C1z5EWE) 
+![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/demo.gif)
