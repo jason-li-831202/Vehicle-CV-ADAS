@@ -12,3 +12,6 @@ TrafficLaneDetector/temp/pic/test-4.jpg
 TrafficLaneDetector/temp/pic/test-5.png
 TrafficLaneDetector/temp/test_video.mp4
 TrafficLaneDetector/temp/test_video_out.mp4
+ObjectDetector/models/yolov5e-Lite-320.onnx
+ObjectDetector/models/yolov5g-Lite-640.onnx
+ObjectDetector/models/yolov5s-Lite-416.onnx

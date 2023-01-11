@@ -7,11 +7,41 @@ import logging
 import numpy as np
 import onnxruntime as ort
 try :
-    from ObjectDetector.utils import hex_to_rgb
+    from utils import hex_to_rgb
 except :
-    from ..ObjectDetector.utils import hex_to_rgb
+    from ObjectDetector.utils import hex_to_rgb
 
+class YoloLiteParameters():
+    def __init__(self, input_shape, num_classes):
+        anchors = [[10, 13, 16, 30, 33, 23], [30, 61, 62, 45, 59, 119], [116, 90, 156, 198, 373, 326]]
+        self.nl = len(anchors)
+        self.na = len(anchors[0]) // 2
+        self.no = num_classes + 5
+        self.grid = [np.zeros(1)] * self.nl
+        self.stride = np.array([8., 16., 32.])
+        self.anchor_grid = np.asarray(anchors, dtype=np.float32).reshape(self.nl, -1, 2)
+        self.input_shape = input_shape
 
+    def _make_grid(self, nx=20, ny=20):
+        xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
+        return np.stack((xv, yv), 2).reshape((-1, 2)).astype(np.float32)
+
+    def postprocess(self, outs):
+        row_ind = 0
+        for i in range(self.nl):
+            h, w = int(self.input_shape[0] / self.stride[i]), int(self.input_shape[1] / self.stride[i])
+            length = int(self.na * h * w)
+            if self.grid[i].shape[2:4] != (h, w):
+                self.grid[i] = self._make_grid(w, h)
+
+            outs[row_ind:row_ind + length, 0:2] = (outs[row_ind:row_ind + length, 0:2] * 2. - 0.5 + np.tile(
+                self.grid[i], (self.na, 1))) * int(self.stride[i])
+            outs[row_ind:row_ind + length, 2:4] = (outs[row_ind:row_ind + length, 2:4] * 2) ** 2 * np.repeat(
+                self.anchor_grid[i], h * w, axis=0)
+            row_ind += length
+        return outs
+
+        
 class YoloDetector(object):
     _defaults = {
         "model_path": './ModelConfig/yolov5n-coco.onnx',
@@ -39,6 +69,7 @@ class YoloDetector(object):
         self.__dict__.update(self._defaults) # set up default values
         self.__dict__.update(kwargs) # and update with user overrides
         self.keep_ratio = False
+        self.lite =  False
 
         classes_path = os.path.expanduser(self.classes_path)
         if (os.path.isfile(classes_path) is False):
@@ -50,10 +81,13 @@ class YoloDetector(object):
             print( model_path + " is not exist.")
             raise Exception("%s is not exist." % model_path)
         assert model_path.endswith('.onnx'), 'Onnx Parameters must be a .onnx file.'
+        if ("lite" in model_path.lower()) :
+            self.lite = True
 
         self._get_class(classes_path)
         self._get_model_shape(model_path)
         self._load_model_onnxruntime_version(model_path)
+        self.liteParams = YoloLiteParameters(self.input_shapes, len(self.class_names) )
 
     def _get_class(self, classes_path):
         with open(classes_path) as f:
@@ -70,7 +104,8 @@ class YoloDetector(object):
             print('The model is invalid: %s' % e)
             sys.exit(0)
         else:
-            self.input_shapes = tuple(np.array([[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]).flatten())
+            self.input_shapes = tuple(np.array([[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]).flatten())[-2:]
+
 
     def _load_model_onnxruntime_version(self, model_path) :
         if  ort.get_device() == 'GPU' and 'CUDAExecutionProvider' in  ort.get_available_providers():  # gpu 
@@ -189,32 +224,32 @@ class YoloDetector(object):
         iou = float(self.box_nms_iou)
 
         if (frame_resize == None) :
-            model_size = self.input_shapes[-2:]
+            model_size = self.input_shapes
         else :
             model_size = frame_resize
-        
+
         image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, model_size)
         blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False)
-        output_from_network = self.session.run([self.session.get_outputs()[0].name], {self.session.get_inputs()[0].name:  blob})[0][0]
+        output_from_network = self.session.run([self.session.get_outputs()[0].name], {self.session.get_inputs()[0].name:  blob})[0].squeeze(axis=0)
         
-        rows = output_from_network.shape[0]
+        if self.lite :
+            output_from_network = self.liteParams.postprocess(output_from_network)
+            
         # inference output
-        for r in range(rows):
-            row = output_from_network[r]
-            confidence = row[4]
-            if confidence >= 0.4:
-                classes_scores = row[5:]
-                _, _, _, max_indx = cv2.minMaxLoc(classes_scores)
-                class_id = max_indx[1]
-                if (classes_scores[class_id] > score):
-                    confidences.append(confidence)
-                    class_ids.append(class_id)
-                    x, y, w, h = row[0].item(), row[1].item(), row[2].item(), row[3].item() 
-                    bounding_boxes.append(np.stack([(x - 0.5 * w), (y - 0.5 * h), (x + 0.5 * w), (y + 0.5 * h)], axis=-1))
+        for detection in output_from_network:
+            scores = detection[5:]
+            classId = np.argmax(scores)
+            confidence = scores[classId]
+            if confidence > score and detection[4] > 0.4:
+                x, y, w, h = detection[0].item(), detection[1].item(), detection[2].item(), detection[3].item() 
+                class_ids.append(classId)
+                confidences.append(float(confidence))
+                bounding_boxes.append(np.stack([(x - 0.5 * w), (y - 0.5 * h), (x + 0.5 * w), (y + 0.5 * h)], axis=-1))
 
         bounding_boxes = self.get_boxes_coordinate( bounding_boxes, ratiow, ratioh, padh, padw)
         kpss = self.get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw)
         self.object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
+
 
     def DrawDetectedOnFrame(self, frame_show) :
         tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1  # line/font thickness
@@ -233,15 +268,14 @@ class YoloDetector(object):
                 cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), hex_to_rgb(self.colors_dict[label]), 2)
 
 
-                
-
+        
 if __name__ == "__main__":
     import time
     import sys
 
-    capture = cv2.VideoCapture(r"./temp/歐森隆20210923-Lobby-1.avi")
+    capture = cv2.VideoCapture(r"./temp/行車紀錄器-車禍-2.mp4")
     config = {
-        "model_path": 'models/yolov5n-coco.onnx',
+        "model_path": 'models/yolov5g-Lite-640.onnx',
         "classes_path" : 'models/coco_label.txt',
         "box_score" : 0.4,
         "box_nms_iou" : 0.45,
