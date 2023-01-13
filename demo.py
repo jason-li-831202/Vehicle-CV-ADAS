@@ -11,19 +11,18 @@ from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import 
 from TrafficLaneDetector.ultrafastLaneDetector.utils import OffsetType, CurvatureType
 
 
-video_path = "./TrafficLaneDetector/temp/行車紀錄器-車禍-2.mp4"
+video_path = "./TrafficLaneDetector/temp/行車紀錄器-車禍-1.mp4"
 lane_config = {
-	"model_path": "./TrafficLaneDetector/models/culane_res34.onnx",
+	"model_path": "./TrafficLaneDetector/models/culane_res18.trt",
 	"model_type" : ModelType.UFLDV2_CULANE
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov5m-coco.onnx',
+	"model_path": './ObjectDetector/models/yolov5m-coco.trt',
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
-	"box_score" : 0.6,
+	"box_score" : 0.4,
 	"box_nms_iou" : 0.45
 }
-
 
 # Priority : FCWS > LDWS > LKAS
 class ControlPanel(object):
@@ -198,7 +197,7 @@ if __name__ == "__main__":
 		if ret:	
 			frame_show = frame.copy()
 
-			# Detect Model
+			#========================= Detect Model ========================
 			obect_time = time.time()
 			objectDetector.DetectFrame(frame)
 			obect_infer_time = round(time.time() - obect_time, 2)
@@ -206,8 +205,7 @@ if __name__ == "__main__":
 			laneDetector.DetectFrame(frame)
 			lane_infer_time = round(time.time() - lane_time, 4)
 
-
-			# Analyze Status 
+			#========================= Analyze Status ========================
 			distanceDetector.calcDistance(objectDetector.object_info)
 			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.draw_area_points)
 
@@ -228,8 +226,7 @@ if __name__ == "__main__":
 			analyzeMsg.CheckOffsetStatus(vehicle_offset)
 			analyzeMsg.CheckRouteStatus(vehicle_direction, vehicle_curvature)
 
-
-			# Draw Results
+			#========================== Draw Results =========================
 			transformView.DrawDetectedOnFrame(top_view_show, adjust_lanes_points, analyzeMsg.offset_msg)
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
 			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])

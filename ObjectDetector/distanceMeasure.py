@@ -54,9 +54,12 @@ class SingleCamDistanceMeasure(object):
 					point_x = (xmax + xmin) // 2
 					point_y = ymax
 
-					distance = (self.RefSizeDict[label][0] * self.f)/ (ymax - ymin)
-					distance = distance/12*0.3048 # 1ft = 0.3048 m
-					self.distance_points.append([point_x, point_y, distance])
+					try :
+						distance = (self.RefSizeDict[label][0] * self.f)/ (ymax - ymin)
+						distance = distance/12*0.3048 # 1ft = 0.3048 m
+						self.distance_points.append([point_x, point_y, distance])
+					except :
+						pass
  
 
 	def calcCollisionPoint(self, poly):

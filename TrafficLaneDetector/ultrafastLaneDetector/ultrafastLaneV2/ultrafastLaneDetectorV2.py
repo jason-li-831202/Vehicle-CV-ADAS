@@ -1,8 +1,9 @@
-import onnx
 import onnxruntime
 import cv2
 import time
 import numpy as np
+import tensorrt as trt
+import pycuda.driver as cuda
 try :
 	from ultrafastLaneDetector.utils import ModelType, OffsetType, lane_colors, tusimple_row_anchor, culane_row_anchor
 except :
@@ -20,6 +21,7 @@ class ModelConfig():
 			self.init_tusimple_config()
 		else:
 			self.init_culane_config()
+		self.num_lanes = 4
 
 	def init_tusimple_config(self):
 		self.img_w = 800
@@ -38,6 +40,126 @@ class ModelConfig():
 		self.crop_ratio = 0.6
 		self.row_anchor = np.linspace(0.42,1, 72)
 		self.col_anchor = np.linspace(0,1, 81)
+
+class TensorRTEngine():
+
+	def __init__(self, engine_file_path, cfg):
+		self.cfg = cfg
+		# Create a Context on this device,
+		cuda.init()
+		device = cuda.Device(0)
+		self.cuda_driver_context = device.make_context()
+
+		stream = cuda.Stream()
+		TRT_LOGGER = trt.Logger(trt.Logger.ERROR)
+		runtime = trt.Runtime(TRT_LOGGER)
+		# Deserialize the engine from file
+		with open(engine_file_path, "rb") as f:
+			engine = runtime.deserialize_cuda_engine(f.read())
+
+		self.context =  self._create_context(engine)
+		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self._allocate_buffers(engine)
+
+		# Store
+		self.stream = stream
+		self.engine = engine
+
+	def _allocate_buffers(self, engine):
+		"""Allocates all host/device in/out buffers required for an engine."""
+		host_inputs = []
+		cuda_inputs = []
+		host_outputs = []
+		cuda_outputs = []
+		bindings = []
+
+		for binding in engine:
+			size = trt.volume(engine.get_binding_shape(binding)) * engine.max_batch_size
+			dtype = trt.nptype(engine.get_binding_dtype(binding))
+			# Allocate host and device buffers
+			host_mem = cuda.pagelocked_empty(size, dtype)
+			cuda_mem = cuda.mem_alloc(host_mem.nbytes)
+			# Append the device buffer to device bindings.
+			bindings.append(int(cuda_mem))
+			# Append to the appropriate list.
+			if engine.binding_is_input(binding):
+				host_inputs.append(host_mem)
+				cuda_inputs.append(cuda_mem)
+			else:
+				host_outputs.append(host_mem)
+				cuda_outputs.append(cuda_mem)
+		return host_inputs, cuda_inputs, host_outputs, cuda_outputs, bindings
+
+	def _create_context(self, engine):
+		return engine.create_execution_context()
+
+	def  get_tensorrt_input_shape(self):
+		return self.engine.get_binding_shape(0)
+
+	def  get_tensorrt_output_shape(self):
+		return self.engine.get_binding_shape(-1)
+
+	def inference(self, input_tensor):
+		self.cuda_driver_context.push()
+		# Restore
+		stream = self.stream
+		context = self.context
+		engine = self.engine
+		host_inputs = self.host_inputs
+		cuda_inputs = self.cuda_inputs
+		host_outputs = self.host_outputs
+		cuda_outputs = self.cuda_outputs
+		bindings = self.bindings
+		# Copy input image to host buffer
+		np.copyto(host_inputs[0], input_tensor.ravel())
+		# Transfer input data  to the GPU.
+		cuda.memcpy_htod_async(cuda_inputs[0], host_inputs[0], stream)
+		# Run inference.
+		context.execute_async_v2(bindings=bindings, stream_handle=stream.handle)
+		# Transfer predictions back from the GPU.
+		for host_output, cuda_output in zip(host_outputs, cuda_outputs) :
+			cuda.memcpy_dtoh_async(host_output, cuda_output, stream)
+		# Synchronize the stream
+		stream.synchronize()
+		# Remove any context from the top of the context stack, deactivating it.
+		self.cuda_driver_context.pop()
+
+		# Here we use the first row of output in that batch_size = 1
+		trt_outputs = []
+		for i, output in enumerate(host_outputs) :
+			if i in [0, 2] :
+				mat = np.reshape(output, (1, -1, len(self.cfg.row_anchor), self.cfg.num_lanes) )
+			else :
+				mat = np.reshape(output, (1, -1, len(self.cfg.col_anchor), self.cfg.num_lanes) )
+			trt_outputs.append(mat)
+
+		return trt_outputs
+
+class OnnxEngine():
+
+	def __init__(self, onnx_file_path):
+		if (onnxruntime.get_device() == 'GPU') :
+			self.session = onnxruntime.InferenceSession(onnx_file_path, providers=['CUDAExecutionProvider'])
+		else :
+			self.session = onnxruntime.InferenceSession(onnx_file_path)
+		self.providers = self.session.get_providers()
+
+	def  get_onnx_input_shape(self):
+		return self.session.get_inputs()[0].shape
+
+
+	def  get_onnx_output_shape(self):
+		output_shape = [output.shape for output in self.session.get_outputs()]
+		output_names = [output.name for output in self.session.get_outputs()]
+		if (len(output_names) != 4) :
+			raise Exception("Output dims is error, please check model. load %d channels not match 4." % len(self.output_names))
+		return output_shape, output_names
+	
+	def inference(self, input_tensor):
+		input_name = self.session.get_inputs()[0].name
+		output_names = [output.name for output in self.session.get_outputs()]
+		output = self.session.run(output_names, {input_name: input_tensor})
+
+		return output
 
 class UltrafastLaneDetectorV2():
 	_defaults = {
@@ -79,23 +201,62 @@ class UltrafastLaneDetectorV2():
 		self.cfg = ModelConfig(self.model_type)
 
 		# Initialize model
-		self.initialize_model(self.model_path)
+		self._initialize_model(self.model_path, self.cfg)
 		
-
-	def initialize_model(self, model_path):
-		if (onnxruntime.get_device() == 'GPU') :
-			self.session = onnxruntime.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
+	def _initialize_model(self, model_path, cfg):
+		if model_path.endswith('.trt') :
+			self.framework_type = "trt"
+			self.infer = TensorRTEngine(model_path, cfg)
+			self.providers = 'CUDAExecutionProvider'
 		else :
-			self.session = onnxruntime.InferenceSession(model_path)
-		print("UltrafastLaneDetector Version : ", self.session.get_providers())
+			self.framework_type = "onnx"
+			self.infer = OnnxEngine(model_path)
+			self.providers = self.infer.providers
+
 		# Get model info
 		self.getModel_input_details()
 		self.getModel_output_details()
+		print(f'UfldDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
+
+	def getModel_input_details(self):
+		if (self.framework_type == "trt") :
+			self.input_shape = self.infer.get_tensorrt_input_shape()
+		else :
+			self.input_shape = self.infer.get_onnx_input_shape()
+		self.channes = self.input_shape[1]
+		self.input_height = self.input_shape[2]
+		self.input_width = self.input_shape[3]
+
+	def getModel_output_details(self):
+		if (self.framework_type == "trt") :
+			self.output_shape = self.infer.get_tensorrt_output_shape()
+		else :
+			self.output_shape, self.output_names = self.infer.get_onnx_output_shape()
+
+	def prepare_input(self, image):
+		img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+		self.img_height, self.img_width, self.img_channels = img.shape
+
+
+		# Input values should be from -1 to 1 with a size of 288 x 800 pixels
+		new_size = ( self.input_width, int(self.input_height/self.cfg.crop_ratio))
+		img_input = cv2.resize(img, new_size).astype(np.float32)
+		img_input = img_input[-self.input_height:, :, :]
+		# Scale input pixel values to -1 to 1
+		mean=[0.485, 0.456, 0.406]
+		std=[0.229, 0.224, 0.225]
+		
+		img_input = ((img_input/ 255.0 - mean) / std)
+		img_input = img_input.transpose(2, 0, 1)
+		img_input = img_input[np.newaxis,:,:,:]        
+
+		return img_input.astype(np.float32)
 
 	def DetectFrame(self, image) :
 		input_tensor = self.prepare_input(image)
+
 		# Perform inference on the image
-		output = self.inference(input_tensor)
+		output = self.infer.inference(input_tensor)
 
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.process_output(output, self.cfg, original_image_width =  self.img_width, original_image_height = self.img_height)
@@ -129,8 +290,9 @@ class UltrafastLaneDetectorV2():
 	def AutoDrawLanes(self, image, draw_points=True):
 
 		input_tensor = self.prepare_input(image)
+
 		# Perform inference on the image
-		output = self.inference(input_tensor)
+		output = self.infer.inference(input_tensor)
 
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.process_output(output, self.cfg, original_image_width =  self.img_width, original_image_height = self.img_height)
@@ -139,48 +301,6 @@ class UltrafastLaneDetectorV2():
 		visualization_img = self.draw_lanes(image, self.lanes_points, self.lanes_detected, draw_points, original_image_width =  self.img_width, original_image_height = self.img_height)
 
 		return visualization_img
-
-	def prepare_input(self, image):
-		img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-		self.img_height, self.img_width, self.img_channels = img.shape
-
-
-		# Input values should be from -1 to 1 with a size of 288 x 800 pixels
-		new_size = ( self.input_width, int(self.input_height/self.cfg.crop_ratio))
-		img_input = cv2.resize(img, new_size).astype(np.float32)
-		img_input = img_input[-self.input_height:, :, :]
-		# Scale input pixel values to -1 to 1
-		mean=[0.485, 0.456, 0.406]
-		std=[0.229, 0.224, 0.225]
-		
-		img_input = ((img_input/ 255.0 - mean) / std)
-		img_input = img_input.transpose(2, 0, 1)
-		img_input = img_input[np.newaxis,:,:,:]        
-
-		return img_input.astype(np.float32)
-
-	def inference(self, input_tensor):
-		input_name = self.session.get_inputs()[0].name
-		# output_name = self.session.get_outputs().name
-		output_names = [output.name for output in self.session.get_outputs()]
-		output = self.session.run(output_names, {input_name: input_tensor})
-
-		return output
-
-	def getModel_input_details(self):
-
-		self.input_shape = self.session.get_inputs()[0].shape
-		self.channes = self.input_shape[2]
-		self.input_height = self.input_shape[2]
-		self.input_width = self.input_shape[3]
-
-	def getModel_output_details(self):
-
-		# self.output_shape = self.session.get_outputs()[0].shape
-		self.output_shape = [output.shape for output in self.session.get_outputs()]
-		self.output_names = [output.name for output in self.session.get_outputs()]
-		if (len(self.output_names) != 4) :
-			raise Exception("Output dims is error, please check model. load %d channels not match 4." % len(self.output_names))
 
 	def adjust_lanes_points(self, left_lanes_points, right_lanes_points, image_height) : 
 		# 多项式拟合

@@ -15,3 +15,11 @@ TrafficLaneDetector/temp/test_video_out.mp4
 ObjectDetector/models/yolov5e-Lite-320.onnx
 ObjectDetector/models/yolov5g-Lite-640.onnx
 ObjectDetector/models/yolov5s-Lite-416.onnx
+ObjectDetector/models/yolov5e-Lite-320.trt
+ObjectDetector/models/yolov5l-coco.trt
+ObjectDetector/models/yolov5m-coco.trt
+TrafficLaneDetector/models/culane_res18.trt
+TrafficLaneDetector/models/culane_res34.trt
+TrafficLaneDetector/models/tusimple_18.onnx
+TrafficLaneDetector/models/tusimple_18.trt
+TrafficLaneDetector/models/tusimple_res18.onnx
