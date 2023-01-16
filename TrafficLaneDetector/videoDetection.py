@@ -1,14 +1,14 @@
 import cv2, time
 # import pafy
-from ultrafastLaneDetector.utils import ModelType
-from ultrafastLaneDetector.ultrafastLane import UltrafastLaneDetector
-from ultrafastLaneDetector.ultrafastLaneV2 import UltrafastLaneDetectorV2
+from ultrafastLaneDetector.utils import LaneModelType
+from ultrafastLaneDetector.ultrafastLaneDetector import UltrafastLaneDetector
+from ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
 
 
 video_path = "./temp/test.mp4"
-model_path = "models/culane_res34.onnx"
-# model_type = ModelType.UFLD_TUSIMPLE
-model_type = ModelType.UFLDV2_CULANE
+model_path = "models/tusimple_18.onnx"
+# model_type = LaneModelType.UFLD_TUSIMPLE
+model_type = LaneModelType.UFLD_TUSIMPLE
 
 if __name__ == "__main__":
 	# Initialize video

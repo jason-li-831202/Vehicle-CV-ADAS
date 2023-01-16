@@ -1,5 +1,5 @@
 import tensorrt as trt
-import sys
+import sys, os
 import argparse
 
 
@@ -12,8 +12,12 @@ converts to tensorrt
 """
 
 if __name__ == '__main__':
-	onnx_model_path = "./TrafficLaneDetector/models/tusimple_18.onnx"
-	trt_model_path = "./TrafficLaneDetector/models/tusimple_18.trt"
+	onnx_model_path = "./ObjectDetector/models/yolov8m-coco.onnx"
+	trt_model_path = "./ObjectDetector/models/yolov8m-coco.trt"
+
+	if not os.path.isfile(onnx_model_path):
+		print("File=[ %s ] is not exist. Please check it !" %onnx_model_path )
+		sys.exit()
 
 	logger = trt.Logger(trt.Logger.INFO)
 	EXPLICIT_BATCH = []

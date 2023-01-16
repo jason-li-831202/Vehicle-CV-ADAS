@@ -8,6 +8,11 @@ class CollisionType(Enum):
 	WARNING = "Warning Risk"
 
 
+class ObjectModelType(Enum):
+	YOLOV5 = 0
+	YOLOV5_LITE = 1
+	YOLOV8 = 2
+
 def hex_to_rgb(value):
     value = value.lstrip('#')
     lv = len(value)

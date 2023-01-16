@@ -10,9 +10,9 @@ import tensorrt as trt
 import pycuda.driver as cuda
 
 try :
-	from utils import hex_to_rgb
+	from utils import ObjectModelType, hex_to_rgb
 except :
-	from ObjectDetector.utils import hex_to_rgb
+	from ObjectDetector.utils import ObjectModelType, hex_to_rgb
 
 class YoloLiteParameters():
 	def __init__(self, input_shape, num_classes):
@@ -46,7 +46,8 @@ class YoloLiteParameters():
 
 class TensorRTParameters():
 
-	def __init__(self, engine_file_path, num_classes):
+	def __init__(self, engine_file_path, num_classes, model_type):
+		self.model_type =model_type
 		# Create a Context on this device,
 		cuda.init()
 		device = cuda.Device(0)
@@ -64,6 +65,7 @@ class TensorRTParameters():
 		self.context =  self._create_context(engine)
 		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self._allocate_buffers(engine)
 		self.input_shapes = engine.get_binding_shape(0)[-2:]
+		self.dtype = trt.nptype(engine.get_binding_dtype(0))
 
 		# Store
 		self.stream = stream
@@ -123,13 +125,16 @@ class TensorRTParameters():
 
 		# Here we use the first row of output in that batch_size = 1
 		trt_outputs = host_outputs[0]
-
-		return np.reshape(trt_outputs, (-1, self.num_classes+5))
+		if (self.model_type == ObjectModelType.YOLOV8) :
+			return np.reshape(trt_outputs, (self.num_classes+4, -1 ))
+		else :
+			return np.reshape(trt_outputs, (-1, self.num_classes+5))
 
 
 class YoloDetector(object):
 	_defaults = {
 		"model_path": './models/yolov5n-coco.onnx',
+		"model_type" : ObjectModelType.YOLOV5,
 		"classes_path" : './models/coco_label.txt',
 		"box_score" : 0.4,
 		"box_nms_iou" : 0.45
@@ -158,7 +163,7 @@ class YoloDetector(object):
 		
 		classes_path = os.path.expanduser(self.classes_path)
 		if (os.path.isfile(classes_path) is False):
-			print( classes_path + " is not exist.")
+			print( classes_path )
 			raise Exception("%s is not exist." % classes_path)
 		self._get_class(classes_path)
 
@@ -174,7 +179,8 @@ class YoloDetector(object):
 		else :
 			self.framework_type = "onnx"
 			self._load_model_onnxruntime_version(model_path)
-		if ("lite" in model_path.lower()) :
+		
+		if (self.model_type == ObjectModelType.YOLOV5_LITE) :
 			self.lite = True
 		print(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
 		self.liteParams = YoloLiteParameters(self.input_shapes, len(self.class_names))
@@ -203,10 +209,16 @@ class YoloDetector(object):
 		else :
 			self.providers = 'CPUExecutionProvider'
 		self.session = ort.InferenceSession(model_path, providers= [self.providers] )
+		if 'float16' in self.session.get_inputs()[0].type :
+			self.input_types = np.float16
+		else :
+			self.input_types = np.float32
 		self.providers = 'CUDAExecutionProvider'
 
 	def _load_model_tensorrt(self, model_path) :
-		self.session = TensorRTParameters(model_path, len(self.class_names))
+		self.session = TensorRTParameters(model_path, len(self.class_names), self.model_type)
+		self.input_types = self.session.dtype 
+
 		self.input_shapes = self.session.input_shapes
 		self.providers = 'CUDAExecutionProvider'
 
@@ -310,7 +322,7 @@ class YoloDetector(object):
 			results = [results[0]]
 		return results
 
-	def DetectFrame(self, srcimg, test = None,frame_resize=None) :
+	def DetectFrame(self, srcimg) :
 		kpss = []
 		class_ids = []
 		confidences = []
@@ -318,28 +330,35 @@ class YoloDetector(object):
 		score = float(self.box_score)
 		iou = float(self.box_nms_iou)
 
-		if (frame_resize == None) :
-			model_size = self.input_shapes
-		else :
-			model_size = frame_resize
 
-		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, model_size)
-		blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False)
-
+		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes)
+		blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False).astype(self.input_types)
+		
 		if self.framework_type == "trt" :
 			output_from_network = self.session.postprocess(blob)
 		else :
 			output_from_network = self.session.run([self.session.get_outputs()[0].name], {self.session.get_inputs()[0].name:  blob})[0].squeeze(axis=0)
+		
+		if (self.model_type == ObjectModelType.YOLOV8) :
+			output_from_network = output_from_network.T
 		
 		if self.lite :
 			output_from_network = self.liteParams.postprocess(output_from_network)
 
 		# inference output
 		for detection in output_from_network:
-			scores = detection[5:]
+			if (self.model_type == ObjectModelType.YOLOV8) :
+				scores = detection[4:]
+			else :
+				scores = detection[5:]
 			classId = np.argmax(scores)
 			confidence = scores[classId]
-			if confidence > score and detection[4] > 0.4:
+			if confidence > score :
+				if (self.model_type != ObjectModelType.YOLOV8) :
+					if (detection[4] > 0.4 ) :
+						pass
+					else :
+						continue
 				x, y, w, h = detection[0].item(), detection[1].item(), detection[2].item(), detection[3].item() 
 				class_ids.append(classId)
 				confidences.append(float(confidence))
@@ -348,7 +367,6 @@ class YoloDetector(object):
 		bounding_boxes = self.get_boxes_coordinate( bounding_boxes, ratiow, ratioh, padh, padw)
 		kpss = self.get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw)
 		self.object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
-
 
 	def DrawDetectedOnFrame(self, frame_show) :
 		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1  # line/font thickness
@@ -362,12 +380,17 @@ class YoloDetector(object):
 				tf = max(tl - 1, 1)  # font thickness
 				t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
 				c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-				cv2.rectangle(frame_show, c1, c2, hex_to_rgb(self.colors_dict[label]), -1, cv2.LINE_AA)
+
+				if (label != 'unknown') :
+					cv2.rectangle(frame_show, c1, c2, hex_to_rgb(self.colors_dict[label]), -1, cv2.LINE_AA)
+					cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), hex_to_rgb(self.colors_dict[label]), 2)
+				else :
+					cv2.rectangle(frame_show, c1, c2, (0, 0, 0), -1, cv2.LINE_AA)
+					cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), (0, 0, 0), 2)
 				cv2.putText(frame_show, label, (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-				cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), hex_to_rgb(self.colors_dict[label]), 2)
-
-
 		
+
+
 if __name__ == "__main__":
 	import time
 	import sys
@@ -375,6 +398,7 @@ if __name__ == "__main__":
 	capture = cv2.VideoCapture(r"./temp/歐森隆20210923-Lobby-1.avi")
 	config = {
 		"model_path": 'models/yolov5m-coco.trt',
+		"model_type" : ObjectModelType.YOLOV5,
 		"classes_path" : 'models/coco_label.txt',
 		"box_score" : 0.4,
 		"box_nms_iou" : 0.45,

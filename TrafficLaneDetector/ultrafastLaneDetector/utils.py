@@ -1,6 +1,6 @@
 from enum import Enum
 
-class ModelType(Enum):
+class LaneModelType(Enum):
 	UFLD_TUSIMPLE = 0
 	UFLD_CULANE = 1
 	UFLDV2_TUSIMPLE = 2

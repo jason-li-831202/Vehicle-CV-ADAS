@@ -1,24 +1,27 @@
 import cv2, time
 import numpy as np
+import pycuda.driver as drv
+
 from taskConditions import TaskConditions
-from ObjectDetector.yoloDetectorV5 import YoloDetector
-from ObjectDetector.utils import CollisionType
+from ObjectDetector.yoloDetector import YoloDetector
+from ObjectDetector.utils import ObjectModelType,  CollisionType
 from ObjectDetector.distanceMeasure import SingleCamDistanceMeasure
-from TrafficLaneDetector.ultrafastLaneDetector.utils import ModelType
-from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLane import UltrafastLaneDetector
-from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneV2 import UltrafastLaneDetectorV2
+
+from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetector import UltrafastLaneDetector
+from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
 from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import PerspectiveTransformation
-from TrafficLaneDetector.ultrafastLaneDetector.utils import OffsetType, CurvatureType
+from TrafficLaneDetector.ultrafastLaneDetector.utils import LaneModelType, OffsetType, CurvatureType
 
 
-video_path = "./TrafficLaneDetector/temp/行車紀錄器-車禍-1.mp4"
+video_path = "./TrafficLaneDetector/temp/行車紀錄器-5.mp4"
 lane_config = {
 	"model_path": "./TrafficLaneDetector/models/culane_res18.trt",
-	"model_type" : ModelType.UFLDV2_CULANE
+	"model_type" : LaneModelType.UFLDV2_CULANE
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov5m-coco.trt',
+	"model_path": './ObjectDetector/models/yolov8l-coco.trt',
+	"model_type" : ObjectModelType.YOLOV8,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
 	"box_nms_iou" : 0.45
@@ -167,13 +170,16 @@ if __name__ == "__main__":
 
 	fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 	vout = cv2.VideoWriter(video_path[:-4]+'_out.mp4', fourcc , 30.0, (width, height))
-	cv2.namedWindow("Detected lanes", cv2.WINDOW_NORMAL)	
+	cv2.namedWindow("ADAS Simulation", cv2.WINDOW_NORMAL)	
 	
 	#==========================================================
 	# 					Initialize Class
 	#==========================================================
+	print("[Pycuda] Cuda Version: {}".format(drv.get_version()))
+	print("[Driver] Cuda Version: {}".format(drv.get_driver_version()))
+
 	# lane detection model
-	print("Model Type : ", lane_config["model_type"].name)
+	print("UfldDetector Model Type : ", lane_config["model_type"].name)
 	if ( "UFLDV2" in lane_config["model_type"].name) :
 		UltrafastLaneDetectorV2.set_defaults(lane_config)
 		laneDetector = UltrafastLaneDetectorV2()
@@ -183,6 +189,7 @@ if __name__ == "__main__":
 	transformView = PerspectiveTransformation( (width, height) )
 
 	# object detection model
+	print("YoloDetector Model Type : ", object_config["model_type"].name)
 	YoloDetector.set_defaults(object_config)
 	objectDetector = YoloDetector()
 	distanceDetector = SingleCamDistanceMeasure()
@@ -236,7 +243,7 @@ if __name__ == "__main__":
 			frame_show = transformView.DisplayBirdView(frame_show, top_view_show)
 			frame_show = displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
 			frame_show = displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
-			cv2.imshow("Detected lanes", frame_show)
+			cv2.imshow("ADAS Simulation", frame_show)
 
 		else:
 			break

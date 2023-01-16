@@ -23,3 +23,10 @@ TrafficLaneDetector/models/culane_res34.trt
 TrafficLaneDetector/models/tusimple_18.onnx
 TrafficLaneDetector/models/tusimple_18.trt
 TrafficLaneDetector/models/tusimple_res18.onnx
+ObjectDetector/models/yolov5s-Lite-416.trt
+ObjectDetector/models/yolov8l-coco.onnx
+ObjectDetector/models/yolov8l-coco.trt
+ObjectDetector/models/yolov8m-coco.onnx
+ObjectDetector/models/yolov8m-coco.trt
+TrafficLaneDetector/temp/test_Trim_out.mp4
+TrafficLaneDetector/temp/行車紀錄器-5_out.mp4

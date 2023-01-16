@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
-from ultrafastLaneDetector.utils import ModelType
+from ultrafastLaneDetector.utils import LaneModelType
 from ultrafastLaneDetector.ultrafastLane import UltrafastLaneDetector
 from ultrafastLaneDetector.ultrafastLaneV2 import UltrafastLaneDetectorV2
 
 
 image_path = "./temp/test3.jpg"
 model_path = "models/culane_res18.onnx"
-# model_type = ModelType.UFLD_TUSIMPLE
-model_type = ModelType.UFLDV2_CULANE
+# model_type = LaneModelType.UFLD_TUSIMPLE
+model_type = LaneModelType.UFLDV2_CULANE
 
 
 # Initialize lane detection model

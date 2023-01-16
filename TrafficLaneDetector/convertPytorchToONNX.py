@@ -3,10 +3,10 @@ import torch
 import numpy as np
 import onnx
 
-from ultrafastLaneDetector.utils import ModelType
-from ultrafastLaneDetector.ultrafastLaneV2.configs.config import Config
-from ultrafastLaneDetector.ultrafastLaneV2 import model_tusimple
-from ultrafastLaneDetector.ultrafastLane.model import parsingNet
+from ultrafastLaneDetector.utils import LaneModelType
+from ultrafastLaneDetector.exportLib.ultrafastLane.model import parsingNet
+from ultrafastLaneDetector.exportLib.ultrafastLaneV2.configs.config import Config
+from ultrafastLaneDetector.exportLib.ultrafastLaneV2 import model_tusimple
 from pathlib import Path
 
 
@@ -14,7 +14,7 @@ class ModelConfig():
 
 	def __init__(self, model_type):
 
-		if model_type == ModelType.UFLD_TUSIMPLE:
+		if model_type == LaneModelType.UFLD_TUSIMPLE:
 			self.init_tusimple_config()
 		else:
 			self.init_culane_config()
@@ -46,13 +46,15 @@ def merge_config(config_path):
     
     return cfg
 
-def convert_model(model_path, onnx_file_path, model_type=ModelType.UFLDV2_CULANE):
+def convert_model(model_path, model_type=LaneModelType.UFLDV2_CULANE):
 
 	# Load model configuration based on the model type
 	print("Model Type : ", model_type.name)
+	file = Path(model_path)
+	onnx_file_path = file.with_suffix('.onnx')
+
 	if ( "UFLDV2" in model_type.name) :
-		print(model_path)
-		cfg = merge_config("./ultrafastLaneDetector/ultrafastLaneV2/configs/"+Path(model_path).stem+".py")
+		cfg = merge_config("./ultrafastLaneDetector/exportLib/ultrafastLaneV2/configs/"+file.stem+".py")
 		assert cfg.backbone in ['18', '34', '50', '101', '152', '50next', '101next', '50wide', '101wide']
 	else :
 		cfg = ModelConfig(model_type)
@@ -67,7 +69,7 @@ def convert_model(model_path, onnx_file_path, model_type=ModelType.UFLDV2_CULANE
 					use_aux=False) # we dont need auxiliary segmentation in testing
 		img = torch.zeros(1, 3, 288, 800).to('cpu')
 
-	state_dict = torch.load(model_path, map_location='cpu')['model'] # CPU
+	state_dict = torch.load(file, map_location='cpu')['model'] # CPU
 
 	compatible_state_dict = {}
 	for k, v in state_dict.items():
@@ -80,19 +82,17 @@ def convert_model(model_path, onnx_file_path, model_type=ModelType.UFLDV2_CULANE
 	net.load_state_dict(compatible_state_dict, strict=False)
 	torch.onnx.export(net, img, onnx_file_path, verbose=True)
 
-	model = onnx.load(onnx_file_path)
-
 	# Check that the IR is well formed
+	model = onnx.load(onnx_file_path)
 	onnx.checker.check_model(model)
 	# Print a human readable representation of the graph
 	print("==============================================================================================")
 
 if __name__ == '__main__':
-	onnx_model_path = "curvelanes_res18.onnx"
-	model_path = "models/curvelanes_res18.pth"
-	model_type = ModelType.UFLDV2_CULANE
+	model_path = "models/culane_res18.pth"
+	model_type = LaneModelType.UFLDV2_CULANE
 
-	convert_model(model_path, onnx_model_path, model_type)
+	convert_model(model_path, model_type)
 
 
 

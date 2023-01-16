@@ -1,7 +1,7 @@
 # Vehicle-CV-ADAS
 Example scripts for the detection of lanes using the [ultra fast lane detection v2](https://github.com/cfzd/Ultra-Fast-Lane-Detection-v2) model in ONNX/TensorRT.
 
-Example scripts for the detection of objects using the [yolov5](https://github.com/ultralytics/yolov5)/[yolov5-lite](https://github.com/ppogg/YOLOv5-Lite) model in ONNX/TensorRT.
+Example scripts for the detection of objects using the [yolov5](https://github.com/ultralytics/yolov5)/[yolov5-lite](https://github.com/ppogg/YOLOv5-Lite)/[yolov8](https://github.com/ultralytics/ultralytics) model in ONNX/TensorRT.
 
 ![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/pic/demo.JPG)
 
