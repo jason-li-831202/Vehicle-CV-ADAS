@@ -39,15 +39,15 @@ Example scripts for the detection of objects using the [yolov5](https://github.c
    "box_nms_iou" : 0.45
   }
  ```
- | Target          | Model Type                     | 
- | :-------------: |:------------------------------:| 
- | Lanes           | LaneModelType.UFLD_TUSIMPLE    | 
- | Lanes           | LaneModelType.UFLD_CULANE      |   
- | Lanes           | LaneModelType.UFLDV2_TUSIMPLE  |   
- | Lanes           | LaneModelType.UFLDV2_CULANE    | 
- | Object          | ObjectModelType.YOLOV5         | 
- | Object          | ObjectModelType.YOLOV5_LITE    | 
- | Object          | ObjectModelType.YOLOV8         | 
+ | Target          | Model Type                       | 
+ | :-------------: |:-------------------------------- | 
+ | Lanes           | `LaneModelType.UFLD_TUSIMPLE`    | 
+ | Lanes           | `LaneModelType.UFLD_CULANE`      |   
+ | Lanes           | `LaneModelType.UFLDV2_TUSIMPLE`  |   
+ | Lanes           | `LaneModelType.UFLDV2_CULANE`    | 
+ | Object          | `ObjectModelType.YOLOV5`         | 
+ | Object          | `ObjectModelType.YOLOV5_LITE`    | 
+ | Object          | `ObjectModelType.YOLOV8`         | 
 
 
 ## [Inference video Example](https://www.youtube.com/watch?v=CHO0C1z5EWE) 
