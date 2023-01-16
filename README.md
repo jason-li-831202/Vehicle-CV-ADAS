@@ -8,47 +8,49 @@ Example scripts for the detection of objects using the [yolov5](https://github.c
 
 ## Requirements
 
- * **OpenCV**, **Scikit-learn**, **onnxruntime**, **pycuda** and **pytorch**. 
- 
+* **OpenCV**, **Scikit-learn**, **onnxruntime**, **pycuda** and **pytorch**. 
+
 ## Examples
-  * ***Comvert Onnx to TenserRT model***:
- 
- ```
- python convertOnnxToTensorRT.py
- ```
- 
-  * ***Video inference***:
- 
- ```
- python demo.py
- ```
- 
-   * **Setting Config**:
+ * ***Comvert Onnx to TenserRT model*** :
 
-   ```python
-   lane_config = {
-    "model_path": "./TrafficLaneDetector/models/culane_res18.trt",
-    "model_type" : LaneModelType.UFLDV2_CULANE
-   }
+```
+python convertOnnxToTensorRT.py
+```
 
-   object_config = {
-    "model_path": './ObjectDetector/models/yolov8l-coco.trt',
-    "model_type" : ObjectModelType.YOLOV8,
-    "classes_path" : './ObjectDetector/models/coco_label.txt',
-    "box_score" : 0.4,
-    "box_nms_iou" : 0.45
-   }
-  ```
-  | Target          | Model Type                       | 
-  | :-------------: |:-------------------------------- | 
-  | Lanes           | `LaneModelType.UFLD_TUSIMPLE`    | 
-  | Lanes           | `LaneModelType.UFLD_CULANE`      |   
-  | Lanes           | `LaneModelType.UFLDV2_TUSIMPLE`  |   
-  | Lanes           | `LaneModelType.UFLDV2_CULANE`    | 
-  | Object          | `ObjectModelType.YOLOV5`         | 
-  | Object          | `ObjectModelType.YOLOV5_LITE`    | 
-  | Object          | `ObjectModelType.YOLOV8`         | 
+ * ***Video inference*** :
 
+   * Setting Config :
+     > Note : can support onnx/tensorRT format model. But it needs to match the same model type.
+
+    ```python
+    lane_config = {
+     "model_path": "./TrafficLaneDetector/models/culane_res18.trt",
+     "model_type" : LaneModelType.UFLDV2_CULANE
+    }
+
+    object_config = {
+     "model_path": './ObjectDetector/models/yolov8l-coco.trt',
+     "model_type" : ObjectModelType.YOLOV8,
+     "classes_path" : './ObjectDetector/models/coco_label.txt',
+     "box_score" : 0.4,
+     "box_nms_iou" : 0.45
+    }
+   ```
+   | Target          | Model Type                       |  Describe                                         | 
+   | :-------------: |:-------------------------------- | :------------------------------------------------ | 
+   | Lanes           | `LaneModelType.UFLD_TUSIMPLE`    | Support Tusimple data with ResNet18 backbone.     | 
+   | Lanes           | `LaneModelType.UFLD_CULANE`      | Support CULane data with ResNet18 backbone.       | 
+   | Lanes           | `LaneModelType.UFLDV2_TUSIMPLE`  | Support Tusimple data with ResNet18/34 backbone.  |
+   | Lanes           | `LaneModelType.UFLDV2_CULANE`    | Support CULane data with ResNet18/34 backbone.    | 
+   | Object          | `ObjectModelType.YOLOV5`         | Support yolov5n/s/m/l/x model.                    | 
+   | Object          | `ObjectModelType.YOLOV5_LITE`    | Support yolov5lite-e/s/c/g model.                 | 
+   | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
+   
+   * Run :
+   
+    ```
+    python demo.py
+    ```
 
 ## [Inference video Example](https://www.youtube.com/watch?v=CHO0C1z5EWE) 
 ![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/demo.gif)
