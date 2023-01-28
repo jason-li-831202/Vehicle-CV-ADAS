@@ -1,8 +1,9 @@
 import cv2, time
 import numpy as np
+import logging
 import pycuda.driver as drv
 
-from taskConditions import TaskConditions
+from taskConditions import TaskConditions, Logger
 from ObjectDetector.yoloDetector import YoloDetector
 from ObjectDetector.utils import ObjectModelType,  CollisionType
 from ObjectDetector.distanceMeasure import SingleCamDistanceMeasure
@@ -11,7 +12,7 @@ from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetector import Ultr
 from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
 from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import PerspectiveTransformation
 from TrafficLaneDetector.ultrafastLaneDetector.utils import LaneModelType, OffsetType, CurvatureType
-
+LOGGER = Logger(None, logging.INFO, logging.INFO )
 
 video_path = "./TrafficLaneDetector/temp/行車紀錄器-5.mp4"
 lane_config = {
@@ -163,6 +164,7 @@ class ControlPanel(object):
 
 
 if __name__ == "__main__":
+
 	# Initialize read and save video 
 	cap = cv2.VideoCapture(video_path)
 	width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) 
@@ -175,23 +177,23 @@ if __name__ == "__main__":
 	#==========================================================
 	# 					Initialize Class
 	#==========================================================
-	print("[Pycuda] Cuda Version: {}".format(drv.get_version()))
-	print("[Driver] Cuda Version: {}".format(drv.get_driver_version()))
+	LOGGER.info("[Pycuda] Cuda Version: {}".format(drv.get_version()))
+	LOGGER.info("[Driver] Cuda Version: {}".format(drv.get_driver_version()))
 
 	# lane detection model
-	print("UfldDetector Model Type : ", lane_config["model_type"].name)
+	LOGGER.info("UfldDetector Model Type : {}".format(lane_config["model_type"].name))
 	if ( "UFLDV2" in lane_config["model_type"].name) :
 		UltrafastLaneDetectorV2.set_defaults(lane_config)
-		laneDetector = UltrafastLaneDetectorV2()
+		laneDetector = UltrafastLaneDetectorV2(logger=LOGGER)
 	else :
 		UltrafastLaneDetector.set_defaults(lane_config)
-		laneDetector = UltrafastLaneDetector()
+		laneDetector = UltrafastLaneDetector(logger=LOGGER)
 	transformView = PerspectiveTransformation( (width, height) )
 
 	# object detection model
-	print("YoloDetector Model Type : ", object_config["model_type"].name)
+	LOGGER.info("YoloDetector Model Type : {}".format(object_config["model_type"].name))
 	YoloDetector.set_defaults(object_config)
-	objectDetector = YoloDetector()
+	objectDetector = YoloDetector(LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
 
 	# display panel

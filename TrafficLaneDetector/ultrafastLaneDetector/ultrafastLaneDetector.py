@@ -165,14 +165,17 @@ class UltrafastLaneDetector():
 		else:
 			return "Unrecognized attribute name '" + n + "'"
 
-	def __init__(self, model_path=None, model_type=None):
+	def __init__(self, model_path=None, model_type=None, logger=None):
 		if (None in [model_path, model_type]) :
 			self.__dict__.update(self._defaults) # set up default values
 		else :
 			self.model_path = model_path
 			self.model_type = model_type
 
+		self.logger = logger
 		if ( self.model_type not in [LaneModelType.UFLD_TUSIMPLE, LaneModelType.UFLD_CULANE]) :
+			if (self.logger) :
+				self.logger.error("UltrafastLaneDetector can use %s type." % self.model_type.name)
 			raise Exception("UltrafastLaneDetector can use %s type." % self.model_type.name)
 		self.fps = 0
 		self.timeLastPrediction = time.time()
@@ -200,7 +203,7 @@ class UltrafastLaneDetector():
 		# Get model info
 		self.getModel_input_details()
 		self.getModel_output_details()
-		print(f'UfldDetector Type : [{self.framework_type}] || Version : {self.providers}')
+		self.logger.info(f'UfldDetector Type : [{self.framework_type}] || Version : {self.providers}')
 
 	def getModel_input_details(self):
 		if (self.framework_type == "trt") :

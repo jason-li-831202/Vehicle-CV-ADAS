@@ -1,7 +1,64 @@
 
 import numpy as np
+import logging
+import ctypes
 from ObjectDetector.utils import CollisionType
 from TrafficLaneDetector.ultrafastLaneDetector.utils import OffsetType, CurvatureType
+
+STD_OUTPUT_HANDLE= -11
+std_out_handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+def set_color(color, handle=std_out_handle):
+	bool = ctypes.windll.kernel32.SetConsoleTextAttribute(handle, color)
+	return bool
+
+class Logger:
+	FOREGROUND_WHITE = 0x0007
+	FOREGROUND_BLUE = 0x01 # text color contains blue.
+	FOREGROUND_GREEN= 0x02 # text color contains green.
+	FOREGROUND_RED  = 0x04 # text color contains red.
+	FOREGROUND_YELLOW = FOREGROUND_RED | FOREGROUND_GREEN
+
+	def __init__(self, path, clevel = logging.DEBUG, Flevel = logging.DEBUG):
+		self.logger = logging.getLogger(path)
+		self.logger.setLevel(logging.DEBUG)
+		self.clevel = clevel
+		fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
+		#設置CMD日誌
+		sh = logging.StreamHandler()
+		sh.setFormatter(fmt)
+		sh.setLevel(clevel)
+		self.logger.addHandler(sh)
+		#設置文件日誌
+		if (path != None) :
+			fh = logging.FileHandler(path)
+			fh.setFormatter(fmt)
+			fh.setLevel(Flevel)
+			self.logger.addHandler(fh)
+
+	def changelevel(self, clevel) :
+		self.clevel = clevel
+		self.logger.setLevel(clevel)
+
+	def debug(self,message):
+		self.logger.debug(message)
+ 
+	def info(self,message,color=FOREGROUND_BLUE):
+		set_color(color)
+		self.logger.info(message)
+		set_color(self.FOREGROUND_WHITE)
+ 
+	def war(self,message,color=FOREGROUND_YELLOW):
+		set_color(color)
+		self.logger.warn(message)
+		set_color(self.FOREGROUND_WHITE)
+ 
+	def error(self,message,color=FOREGROUND_RED):
+		set_color(color)
+		self.logger.error(message)
+		set_color(self.FOREGROUND_WHITE)
+ 
+	def cri(self,message):
+		self.logger.critical(message)
 
 class TaskConditions(object):
 	

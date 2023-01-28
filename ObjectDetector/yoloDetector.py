@@ -155,21 +155,24 @@ class YoloDetector(object):
 		else:
 			return "Unrecognized attribute name '" + n + "'"
 
-	def __init__(self, **kwargs):
+	def __init__(self, logger=None, **kwargs):
 		self.__dict__.update(self._defaults) # set up default values
 		self.__dict__.update(kwargs) # and update with user overrides
+		self.logger = logger
 		self.keep_ratio = False
 		self.lite =  False
 		
 		classes_path = os.path.expanduser(self.classes_path)
+		if (self.logger) :
+			self.logger.debug("class path: %s." % classes_path)
 		if (os.path.isfile(classes_path) is False):
-			print( classes_path )
 			raise Exception("%s is not exist." % classes_path)
 		self._get_class(classes_path)
 
 		model_path = os.path.expanduser(self.model_path)
+		if (self.logger) :
+			self.logger.debug("model path: %s." % model_path)
 		if (os.path.isfile(model_path) is False):
-			print( model_path + " is not exist.")
 			raise Exception("%s is not exist." % model_path)
 		assert model_path.endswith(('.onnx', '.trt')), 'Onnx/TensorRT Parameters must be a .onnx/.trt file.'
 
@@ -182,7 +185,8 @@ class YoloDetector(object):
 		
 		if (self.model_type == ObjectModelType.YOLOV5_LITE) :
 			self.lite = True
-		print(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
+		if (self.logger) :
+			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
 		self.liteParams = YoloLiteParameters(self.input_shapes, len(self.class_names))
 
 	def _get_class(self, classes_path):
@@ -197,7 +201,8 @@ class YoloDetector(object):
 		try:
 			onnx.checker.check_model(model)
 		except onnx.checker.ValidationError as e:
-			print('The model is invalid: %s' % e)
+			if (self.logger) :
+				self.logger.error('The model is invalid: %s' % e)
 			sys.exit(0)
 		else:
 			self.input_shapes = tuple(np.array([[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]).flatten())[-2:]
