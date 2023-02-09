@@ -75,9 +75,19 @@ class TaskConditions(object):
 		self.toggle_oscillator_status = [False, False]
 		self.toggle_status_counter = {"Offset" : 0,  "Curvae" : 0, "BirdViewAngle" : 0}
 
-
-	# Calibration road when curvae smooth 
 	def _calibration_curve(self, vehicle_curvature, frequency=3, curvae_thres=15000):
+		"""
+		Calibration road when curvae smooth.
+
+		Args:
+			vehicle_curvature: calc curvature values from birdView.
+			frequency: when togger count > frequency, toggle_status will Default means BirdView will revise.
+			curvae_thres: The larger the values, it means curvae smooth on BirdView.
+
+		Returns:
+			None
+		"""
+
 		# print(vehicle_curvature)
 		if (self.toggle_status_counter["BirdViewAngle"] <= frequency) :
 			if (vehicle_curvature >= curvae_thres ) :
@@ -88,8 +98,18 @@ class TaskConditions(object):
 			self.toggle_status_counter["BirdViewAngle"]  = 0
 			self.toggle_status = "Default"
 
-
 	def _calc_deviation(self, offset, offset_thres):
+		"""
+		Get offset status.
+
+		Args:
+			offset: Get avg offset values.
+			offset_thres: Determine whether the lane line is offset from the center.
+
+		Returns:
+			OffsetType
+		"""
+
 		if ( abs(offset) > offset_thres ) :
 			if (offset > 0 and self.curvature_msg not in {CurvatureType.HARD_LEFT, CurvatureType.EASY_LEFT} ) :
 				msg = OffsetType.RIGHT
@@ -102,26 +122,46 @@ class TaskConditions(object):
 
 		return msg
 
+	def _calc_direction(self, curvature, curvae_dir, curvae_thres):
+		"""
+		Get curvature status.
 
-	def _calc_direction(self, curvature, direction, curvae_thres):
+		Args:
+			curvature: Get avg curvature values.
+			curvae_dir: Get avg curvae direction.
+			curvae_thres: Determine whether the lane line is hard or easy curvae.
+
+		Returns:
+			CurvatureType
+		"""
+
 		if (curvature <= curvae_thres) :
-			if (direction == "L" and self.curvature_msg != CurvatureType.EASY_RIGHT) :
+			if (curvae_dir == "L" and self.curvature_msg != CurvatureType.EASY_RIGHT) :
 				msg = CurvatureType.HARD_LEFT
-			elif (direction == "R" and self.curvature_msg != CurvatureType.EASY_LEFT) :
+			elif (curvae_dir == "R" and self.curvature_msg != CurvatureType.EASY_LEFT) :
 				msg = CurvatureType.HARD_RIGHT
 			else :
 				msg = CurvatureType.UNKNOWN
 		else :
-			if (direction == "L") :
+			if (curvae_dir == "L") :
 				msg = CurvatureType.EASY_LEFT
-			elif (direction == "R") :
+			elif (curvae_dir == "R") :
 				msg = CurvatureType.EASY_RIGHT
 			else :
 				msg = CurvatureType.STRAIGHT
 		return msg
 
-
 	def CheckStatus(self) :
+		"""
+		Determine whether to update Bird View perspective transform(.
+
+		Args:
+			None
+
+		Returns:
+			Bool
+		"""
+
 		if (self.curvature_msg == CurvatureType.UNKNOWN and self.offset_msg == OffsetType.UNKNOWN) :
 			self.toggle_oscillator_status = [False, False]
 
@@ -132,8 +172,18 @@ class TaskConditions(object):
 		else :
 			return False
 
+	def UpdateOffsetStatus(self, vehicle_offset, offset_thres=0.9) :
+		"""
+		Judging the state of the avg offset.
 
-	def CheckOffsetStatus(self, vehicle_offset, offset_thres=0.9) :
+		Args:
+			vehicle_offset: Calc offset values from birdView.
+			offset_thres: Determine whether the lane line is offset from the center.
+
+		Returns:
+			None
+		"""
+
 		if (vehicle_offset != None) :
 			self.vehicle_offset_record.append(vehicle_offset)
 			if len(self.vehicle_offset_record) > 5:
@@ -141,10 +191,9 @@ class TaskConditions(object):
 				avg_vehicle_offset = np.median(self.vehicle_offset_record)
 				self.offset_msg = self._calc_deviation(avg_vehicle_offset, offset_thres)
 
+
 				plus = [i for i in self.vehicle_offset_record if i > 0.2]
 				mius = [i for i in self.vehicle_offset_record if i < -0.2]
-				# print(plus, mius)
-				# print(left_right_status, vehicle_curvature_count)
 				if (self.toggle_status_counter["Offset"] >= 10) :
 					if ( len(plus) == len(self.vehicle_offset_record) ) :
 						self.toggle_oscillator_status[0] = True
@@ -165,8 +214,19 @@ class TaskConditions(object):
 			self.offset_msg = OffsetType.UNKNOWN
 			self.vehicle_offset_record = []
 
+	def UpdateRouteStatus(self, vehicle_direction, vehicle_curvature, curvae_thres=500) :
+		"""
+		Judging the state of the avg curvature.
 
-	def CheckRouteStatus(self, vehicle_direction, vehicle_curvature, curvae_thres=500) :
+		Args:
+			vehicle_direction: Calc preliminary curvae direction from birdView.
+			vehicle_curvature: Calc curvature values from birdView.
+			curvae_thres: Determine whether the lane line is hard or easy curvae.
+
+		Returns:
+			None
+		"""
+
 		if (vehicle_curvature != None) :
 			if (vehicle_direction != None and self.offset_msg == OffsetType.CENTER) :
 				self.vehicle_curvature_record.append([vehicle_direction, vehicle_curvature])
@@ -197,8 +257,19 @@ class TaskConditions(object):
 			self.vehicle_curvature_record = []
 			self.curvature_msg = CurvatureType.UNKNOWN
 
+	def UpdateCollisionStatus(self, vehicle_distance, lane_area, distance_thres=1.5) : 
+		"""
+		Judging the state of the avg distance.
 
-	def CheckCollisionStatus(self, vehicle_distance, lane_area, distance_thres=1.5) : 
+		Args:
+			vehicle_distance: Calc preliminary distance from SingleCamDistanceMeasure Class.
+			lane_area: Whether a valid area is detected.
+			distance_thres: Distance when deciding to warn.
+
+		Returns:
+			None
+		"""
+
 		if (vehicle_distance != None) :
 			x, y, d = vehicle_distance
 			self.vehicle_collision_record.append(d)

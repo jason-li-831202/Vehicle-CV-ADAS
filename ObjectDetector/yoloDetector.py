@@ -130,7 +130,6 @@ class TensorRTParameters():
 		else :
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
 
-
 class YoloDetector(object):
 	_defaults = {
 		"model_path": './models/yolov5n-coco.onnx',
@@ -394,8 +393,7 @@ class YoloDetector(object):
 					cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), (0, 0, 0), 2)
 				cv2.putText(frame_show, label, (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 		
-
-
+		
 if __name__ == "__main__":
 	import time
 	import sys

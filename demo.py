@@ -14,7 +14,7 @@ from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import 
 from TrafficLaneDetector.ultrafastLaneDetector.utils import LaneModelType, OffsetType, CurvatureType
 LOGGER = Logger(None, logging.INFO, logging.INFO )
 
-video_path = "./TrafficLaneDetector/temp/行車紀錄器-5.mp4"
+video_path = "./TrafficLaneDetector/temp/行車紀錄器-10.mp4"
 lane_config = {
 	"model_path": "./TrafficLaneDetector/models/culane_res18.trt",
 	"model_type" : LaneModelType.UFLDV2_CULANE
@@ -82,6 +82,15 @@ class ControlPanel(object):
 		self.curve_status = None
 
 	def _updateFPS(self) :
+		"""
+		Update FPS.
+
+		Args:
+			None
+
+		Returns:
+			None
+		"""
 		self.frame_count += 1
 		if self.frame_count >= 30:
 			self.end = time.time()
@@ -90,6 +99,18 @@ class ControlPanel(object):
 			self.start = time.time()
 
 	def DisplaySignsPanel(self, main_show, offset_type, curvature_type) :
+		"""
+		Display Signs Panel on image.
+
+		Args:
+			main_show: image.
+			offset_type: offset status by OffsetType. (UNKNOWN/CENTER/RIGHT/LEFT)
+			curvature_type: curature status by CurvatureType. (UNKNOWN/STRAIGHT/HARD_LEFT/EASY_LEFT/HARD_RIGHT/EASY_RIGHT)
+
+		Returns:
+			main_show: Draw sings info on frame.
+		"""
+
 		W = 400
 		H = 365
 		widget = np.copy(main_show[:H, :W])
@@ -136,6 +157,19 @@ class ControlPanel(object):
 		return main_show
 
 	def DisplayCollisionPanel(self, main_show, collision_type, obect_infer_time, lane_infer_time, show_ratio=0.25) :
+		"""
+		Display Collision Panel on image.
+
+		Args:
+			main_show: image.
+			collision_type: collision status by CollisionType. (WARNING/PROMPT/NORMAL)
+			obect_infer_time: object detection time -> float.
+			lane_infer_time:  lane detection time -> float.
+
+		Returns:
+			main_show: Draw collision info on frame.
+		"""
+
 		W = int(main_show.shape[1]* show_ratio)
 		H = int(main_show.shape[0]* show_ratio)
 
@@ -218,7 +252,7 @@ if __name__ == "__main__":
 			distanceDetector.calcDistance(objectDetector.object_info)
 			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.draw_area_points)
 
-			analyzeMsg.CheckCollisionStatus(vehicle_distance, laneDetector.draw_area)
+			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.draw_area)
 
 
 			if (not laneDetector.draw_area or analyzeMsg.CheckStatus()) :
@@ -232,19 +266,19 @@ if __name__ == "__main__":
 
 			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(top_view_show, adjust_lanes_points[1], adjust_lanes_points[2])
 
-			analyzeMsg.CheckOffsetStatus(vehicle_offset)
-			analyzeMsg.CheckRouteStatus(vehicle_direction, vehicle_curvature)
+			analyzeMsg.UpdateOffsetStatus(vehicle_offset)
+			analyzeMsg.UpdateRouteStatus(vehicle_direction, vehicle_curvature)
 
 			#========================== Draw Results =========================
 			transformView.DrawDetectedOnFrame(top_view_show, adjust_lanes_points, analyzeMsg.offset_msg)
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
-			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			objectDetector.DrawDetectedOnFrame(frame_show)
 			distanceDetector.DrawDetectedOnFrame(frame_show)
 
-			frame_show = transformView.DisplayBirdView(frame_show, top_view_show)
+			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			frame_show = displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
 			frame_show = displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
+			frame_show = transformView.DisplayBirdView(frame_show, top_view_show)
 			cv2.imshow("ADAS Simulation", frame_show)
 
 		else:

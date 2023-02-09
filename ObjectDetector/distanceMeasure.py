@@ -7,7 +7,7 @@ class SingleCamDistanceMeasure(object):
 	RefSizeDict = { 
 					"person" : (160*INCH, 50*INCH), 
 					"bicycle" : (98*INCH, 65*INCH),
-					"motorbike" : (100*INCH, 100*INCH), # (132*INCH, 100*INCH)
+					"motorbike" : (100*INCH, 100*INCH),
 					"car" : (150*INCH, 180*INCH ),
 					"bus" : (319*INCH, 250*INCH), 
 					"truck" : (346*INCH, 250*INCH), 
@@ -19,17 +19,17 @@ class SingleCamDistanceMeasure(object):
 		self.distance_points = []
 
 	def _isInsidePolygon(self, pt, poly):
-		"""判断点在多边形范围内.
+		"""
+		Judgment point is within the polygon range.
 
-		Parameters
-		----------
-			pt: the object points
-			poly: 为多边形区域
+		Args:
+			pt: the object points.
+			poly: is a polygonal points. [[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
 
-		Return
-		------
+		Returns:
 			total number of all feature vector.
 		"""
+
 		c = False
 		i = -1
 		l = len(poly)
@@ -43,7 +43,6 @@ class SingleCamDistanceMeasure(object):
 					c = not c
 			j=i
 		return c
-
 
 	def calcDistance(self, boxes) :
 		self.distance_points = []
@@ -61,14 +60,12 @@ class SingleCamDistanceMeasure(object):
 					except :
 						pass
  
-
 	def calcCollisionPoint(self, poly):
 		if ( len(self.distance_points) != 0 and len(poly) )  :
 			for x, y, d in self.distance_points:
 				if (self._isInsidePolygon( (x, y), np.squeeze(poly) )) :
 					return [x, y, d]
 		return None
-
 
 	def DrawDetectedOnFrame(self, frame_show) :
 		if ( len(self.distance_points) != 0 )  :
