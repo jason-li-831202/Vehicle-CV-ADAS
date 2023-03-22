@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 from ultrafastLaneDetector.utils import LaneModelType
-from ultrafastLaneDetector.ultrafastLane import UltrafastLaneDetector
-from ultrafastLaneDetector.ultrafastLaneV2 import UltrafastLaneDetectorV2
+from ultrafastLaneDetector.ultrafastLaneDetector import UltrafastLaneDetector
+from ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
 
 
 image_path = "./temp/test3.jpg"
@@ -21,14 +21,17 @@ else :
 
 # Read RGB images
 img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+if img is None:
+    print("The picture path [%s] can't not found!" % (image_path) )
+    exit()
+else :
+	# Detect the lanes
+	output_img = lane_detector.AutoDrawLanes(img)
 
-# Detect the lanes
-output_img = lane_detector.AutoDrawLanes(img)
+	# Draw estimated depth
+	# cv2.namedWindow("Detected lanes", cv2.WINDOW_NORMAL) 
+	cv2.imshow("Detected lanes", output_img)
+	cv2.waitKey(0)
 
-# Draw estimated depth
-# cv2.namedWindow("Detected lanes", cv2.WINDOW_NORMAL) 
-cv2.imshow("Detected lanes", output_img)
-cv2.waitKey(0)
-
-cv2.imwrite("output.jpg",output_img)
+	cv2.imwrite("output.jpg",output_img)
 

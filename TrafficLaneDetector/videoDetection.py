@@ -13,6 +13,9 @@ model_type = LaneModelType.UFLD_TUSIMPLE
 if __name__ == "__main__":
 	# Initialize video
 	cap = cv2.VideoCapture(video_path)
+	if not cap.isOpened():
+		print("The video path [%s] can't not found!" % (video_path) )
+		exit()
 	width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # float `width`
 	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 

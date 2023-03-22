@@ -1,7 +1,7 @@
 import onnxruntime
 import scipy.special
 import cv2
-import time
+import time, os
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
@@ -191,6 +191,8 @@ class UltrafastLaneDetector():
 		
 
 	def _initialize_model(self, model_path, cfg):
+		if not os.path.isfile(model_path):
+			raise Exception("The model path [%s] can't not found!" % model_path)
 		if model_path.endswith('.trt') :
 			self.framework_type = "trt"
 			self.infer = TensorRTEngine(model_path, cfg)
@@ -203,7 +205,8 @@ class UltrafastLaneDetector():
 		# Get model info
 		self.getModel_input_details()
 		self.getModel_output_details()
-		self.logger.info(f'UfldDetector Type : [{self.framework_type}] || Version : {self.providers}')
+		if (self.logger) :
+			self.logger.info(f'UfldDetector Type : [{self.framework_type}] || Version : {self.providers}')
 
 	def getModel_input_details(self):
 		if (self.framework_type == "trt") :
