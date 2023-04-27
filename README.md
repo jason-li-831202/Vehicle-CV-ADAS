@@ -3,19 +3,38 @@ Example scripts for the detection of lanes using the [ultra fast lane detection 
 
 Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv8](https://github.com/ultralytics/ultralytics) model in ONNX/TensorRT.
 
+# ➤ Contents
+1) [Requirements](#Requirements)
+
+2) [Examples](#Examples)
+
+3) [Demo](#Demo)
+
+
 ![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/pic/demo.JPG)
 
 
-## Requirements
+<h1 id="Requirements">➤ Requirements</h1>
 
-* **OpenCV**, **Scikit-learn**, **onnxruntime**, **pycuda** and **pytorch**. 
+* **OpenCV**, **Scikit-learn**, **onnxruntime**, **pycuda** and **pytorch**.
 
-## Examples
+* **Install :**
+
+    The `requirements.txt` file should list all Python libraries that your notebooks
+    depend on, and they will be installed using:
+
+    ```
+    pip install -r requirements.txt
+    ```
+    
+
+<h1 id="Examples">➤ Examples</h1>
+
  * ***Comvert Onnx to TenserRT model*** :
 
-```
-python convertOnnxToTensorRT.py
-```
+    ```
+    python convertOnnxToTensorRT.py
+    ```
 
  * ***Video inference*** :
 
@@ -52,5 +71,10 @@ python convertOnnxToTensorRT.py
     python demo.py
     ```
 
-## [Inference video Example](https://www.youtube.com/watch?v=CHO0C1z5EWE) 
-![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/demo.gif)
+<h1 id="Demo">➤ Demo</h1>
+
+* [***Demo Youtube Video***](https://www.youtube.com/watch?v=CHO0C1z5EWE)
+
+* ***Display Switch***
+
+    ![!ADAS on video](https://github.com/jason-li-831202/Vehicle-CV-ADAS/blob/master/TrafficLaneDetector/temp/demo.gif)

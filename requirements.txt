@@ -1,0 +1,6 @@
+scipy
+pycuda
+onnx==1.12.0
+onnxruntime==1.12.0
+opencv-python==4.5.4.60
+torch==1.12.1+cu116

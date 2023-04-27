@@ -1,4 +1,0 @@
-opencv-python
-scipy
-onnx
-onnxruntime
