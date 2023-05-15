@@ -152,7 +152,7 @@ class PerspectiveTransformation(object):
         return (curvature_direction, curvature), distance_from_center
 
 
-    def DrawDetectedOnFrame(self, image, lanes_points, type=OffsetType.UNKNOWN) :
+    def DrawDetectedOnBirdView(self, image, lanes_points, type=OffsetType.UNKNOWN) :
         for lane_num, lane_points in enumerate(lanes_points):
             if ( lane_num==1 and type == OffsetType.RIGHT) :
                 color = (0, 0, 255)
@@ -162,14 +162,6 @@ class PerspectiveTransformation(object):
                 color = lane_colors[lane_num]
             for x, y in lane_points:
                 cv2.circle(image, (int(x), int(y)), 10, color, -1)
-
-
-    def DisplayBirdView(self, main_show, min_show, show_ratio=0.25) :
-        min_top_view_show = cv2.resize(min_show, (int(main_show.shape[1]* show_ratio), int(main_show.shape[0]* show_ratio)) )
-        min_top_view_show = cv2.copyMakeBorder(min_top_view_show, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[0, 0, 0]) # 添加边框
-        main_show[0:min_top_view_show.shape[0], -min_top_view_show.shape[1]: ] = min_top_view_show
-        return main_show
-
 
     def backward(self, img, flags=cv2.INTER_LINEAR):
         """ Take a top view image and transform it to front view

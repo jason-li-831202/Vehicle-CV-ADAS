@@ -14,14 +14,14 @@ from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import 
 from TrafficLaneDetector.ultrafastLaneDetector.utils import LaneModelType, OffsetType, CurvatureType
 LOGGER = Logger(None, logging.INFO, logging.INFO )
 
-video_path = "./TrafficLaneDetector/temp/行車紀錄器-10.mp4"
+video_path = "./TrafficLaneDetector/temp/test_video.mp4"
 lane_config = {
-	"model_path": "./TrafficLaneDetector/models/culane_res18.trt",
+	"model_path": "./TrafficLaneDetector/models/culane_res34.trt",
 	"model_type" : LaneModelType.UFLDV2_CULANE
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov8l-coco.trt',
+	"model_path": './ObjectDetector/models/yolov8l-coco.onnx',
 	"model_type" : ObjectModelType.YOLOV8,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
@@ -98,6 +98,23 @@ class ControlPanel(object):
 			self.frame_count = 0
 			self.start = time.time()
 
+	def DisplayBirdViewPanel(self, main_show, min_show, show_ratio=0.25) :
+		"""
+		Display BirdView Panel on image.
+
+		Args:
+			main_show: video image.
+			min_show: bird view image.
+			show_ratio: display scale of bird view image.
+
+		Returns:
+			main_show: Draw bird view on frame.
+		"""
+		min_top_view_show = cv2.resize(min_show, (int(main_show.shape[1]* show_ratio), int(main_show.shape[0]* show_ratio)) )
+		min_top_view_show = cv2.copyMakeBorder(min_top_view_show, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[0, 0, 0]) # 添加边框
+		main_show[0:min_top_view_show.shape[0], -min_top_view_show.shape[1]: ] = min_top_view_show
+		return main_show
+	
 	def DisplaySignsPanel(self, main_show, offset_type, curvature_type) :
 		"""
 		Display Signs Panel on image.
@@ -270,15 +287,15 @@ if __name__ == "__main__":
 			analyzeMsg.UpdateRouteStatus(vehicle_direction, vehicle_curvature)
 
 			#========================== Draw Results =========================
-			transformView.DrawDetectedOnFrame(top_view_show, adjust_lanes_points, analyzeMsg.offset_msg)
+			transformView.DrawDetectedOnBirdView(top_view_show, adjust_lanes_points, analyzeMsg.offset_msg)
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
+			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			objectDetector.DrawDetectedOnFrame(frame_show)
 			distanceDetector.DrawDetectedOnFrame(frame_show)
 
-			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
+			frame_show = displayPanel.DisplayBirdViewPanel(frame_show, top_view_show)
 			frame_show = displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
 			frame_show = displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
-			frame_show = transformView.DisplayBirdView(frame_show, top_view_show)
 			cv2.imshow("ADAS Simulation", frame_show)
 
 		else:

@@ -130,6 +130,7 @@ class TensorRTParameters():
 		else :
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
 
+
 class YoloDetector(object):
 	_defaults = {
 		"model_path": './models/yolov5n-coco.onnx',
@@ -326,6 +327,27 @@ class YoloDetector(object):
 			results = [results[0]]
 		return results
 
+	def cornerRect(self, img, bbox, t=5, rt=1, colorR=(255, 0, 255), colorC=(0, 255, 0)):
+		ymin, xmin, ymax, xmax, label = bbox
+		l = max(1, int(min( (ymax-ymin), (xmax-xmin))*0.2))
+
+		if rt != 0:
+			cv2.rectangle(img, (xmin, ymin), (xmax, ymax), colorR, rt)
+		# Top Left  xmin, ymin
+		cv2.line(img,  (xmin, ymin), (xmin + l, ymin), colorC, t)
+		cv2.line(img,  (xmin, ymin), (xmin, ymin + l), colorC, t)
+		# Top Right  xmax, ymin
+		cv2.line(img, (xmax, ymin), (xmax - l, ymin), colorC, t)
+		cv2.line(img, (xmax, ymin), (xmax, ymin + l), colorC, t)
+		# Bottom Left  xmin, ymax
+		cv2.line(img, (xmin, ymax), (xmin + l, ymax), colorC, t)
+		cv2.line(img, (xmin, ymax), (xmin, ymax - l), colorC, t)
+		# Bottom Right  xmax, ymax
+		cv2.line(img, (xmax, ymax), (xmax - l, ymax), colorC, t)
+		cv2.line(img, (xmax, ymax), (xmax, ymax - l), colorC, t)
+
+		return img
+
 	def DetectFrame(self, srcimg) :
 		kpss = []
 		class_ids = []
@@ -373,7 +395,7 @@ class YoloDetector(object):
 		self.object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
 
 	def DrawDetectedOnFrame(self, frame_show) :
-		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1  # line/font thickness
+		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1    # line/font thickness
 		if ( len(self.object_info) != 0 )  :
 			for box, kpss in self.object_info:
 				ymin, xmin, ymax, xmax, label = box
@@ -387,13 +409,14 @@ class YoloDetector(object):
 
 				if (label != 'unknown') :
 					cv2.rectangle(frame_show, c1, c2, hex_to_rgb(self.colors_dict[label]), -1, cv2.LINE_AA)
-					cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), hex_to_rgb(self.colors_dict[label]), 2)
+					self.cornerRect(frame_show, box, colorR= hex_to_rgb(self.colors_dict[label]), colorC= hex_to_rgb(self.colors_dict[label]))
 				else :
 					cv2.rectangle(frame_show, c1, c2, (0, 0, 0), -1, cv2.LINE_AA)
-					cv2.rectangle(frame_show, (xmin, ymin), (xmax, ymax), (0, 0, 0), 2)
-				cv2.putText(frame_show, label, (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+					self.cornerRect(frame_show, box, colorR= (0, 0, 0), colorC= (0, 0, 0) )
+				cv2.putText(frame_show, label, (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, tl / 3, (255, 255, 255), 2)
 		
-		
+
+
 if __name__ == "__main__":
 	import time
 	import sys

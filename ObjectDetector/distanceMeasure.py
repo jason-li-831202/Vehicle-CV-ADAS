@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import typing  
 
 class SingleCamDistanceMeasure(object):
 	# 1 cm = 0.39 inch, original size h x w 
@@ -18,7 +19,7 @@ class SingleCamDistanceMeasure(object):
 		self.f = 100 # focal length
 		self.distance_points = []
 
-	def _isInsidePolygon(self, pt, poly):
+	def _isInsidePolygon(self, pt, poly ):
 		"""
 		Judgment point is within the polygon range.
 
@@ -45,6 +46,14 @@ class SingleCamDistanceMeasure(object):
 		return c
 
 	def calcDistance(self, boxes) :
+		"""
+		Calculate the distance of the target object through the size of pixels.
+
+		Args:
+			boxes: coordinate information and labels of the target object.
+
+		Returns:
+		"""
 		self.distance_points = []
 		if ( len(boxes) != 0 )  :
 			for box, _ in boxes:
@@ -61,6 +70,16 @@ class SingleCamDistanceMeasure(object):
 						pass
  
 	def calcCollisionPoint(self, poly):
+		"""
+		Determine whether the target object is within the main lane lines.
+
+		Args:
+			poly: is a polygonal points. [[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+
+		Returns:
+			[Xcenter, Ybottom, distance]
+		"""
+
 		if ( len(self.distance_points) != 0 and len(poly) )  :
 			for x, y, d in self.distance_points:
 				if (self._isInsidePolygon( (x, y), np.squeeze(poly) )) :
@@ -77,6 +96,20 @@ class SingleCamDistanceMeasure(object):
 					text = ' {} {}'.format( "unknown", unit)
 				else :
 					text = ' {:.2f} {}'.format(d, unit)
+				
+				if (d > 3) :
+					fontScale = 0.5
+				elif ( 1.5 < d <= 3) :
+					fontScale = 0.8
+				elif (d <= 1.5) :
+					fontScale = 1
+				else :
+					fontScale = 0.8
+      
+				# get coords based on boundary
+				textsize = cv2.getTextSize(text, 0, fontScale=fontScale, thickness=3)[0]
+				textX = int((x- textsize[0]/2))
+				textY = int((y + textsize[1]))
 
-				cv2.putText(frame_show, text, (x + 1, y + 30), cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.8, 
+				cv2.putText(frame_show, text, (textX  + 1, textY + 5 ), cv2.FONT_HERSHEY_SCRIPT_COMPLEX, fontScale=fontScale,  
 							color=(0, 255 , 0), thickness=2)
