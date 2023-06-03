@@ -1,4 +1,5 @@
 import cv2
+import logging
 import numpy as np
 try :
     from ultrafastLaneDetector.utils import  lane_colors, OffsetType
@@ -6,16 +7,18 @@ except :
     from ..ultrafastLaneDetector.utils import lane_colors, OffsetType
 
 class PerspectiveTransformation(object):
-    """ This a class for transforming image between front view and top view
+    """ This a class for transforming image between frontal view and bird view
+
     Attributes:
         src (np.array): Coordinates of 4 source points
         dst (np.array): Coordinates of 4 destination points
-        M (np.array): Matrix to transform image from front view to top view
-        M_inv (np.array): Matrix to transform image from top view to front view
+        M (np.array): Matrix to transform image from frontal view to bird view
+        M_inv (np.array): Matrix to transform image from bird view to frontal view
     """
-    def __init__(self, img_size=(1280, 720) ):
+    def __init__(self, img_size=(1280, 720), logger=None ):
         """Init PerspectiveTransformation."""
         self.img_size = img_size
+        self.logger = logger
 
         self.src = np.float32([(self.img_size[0]*0.3, self.img_size[1]*0.7),     # top-left
                                (self.img_size[0]*0.2, self.img_size[1]),         # bottom-left
@@ -31,7 +34,18 @@ class PerspectiveTransformation(object):
         self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)
 
 
-    def updateParams(self, left_lanes, right_lanes, type="Default") :
+    def updateTransformParams(self, left_lanes, right_lanes, type="Default") :
+        """ 
+        Update the transition area of the frontal view
+
+		Args:
+            left_lanes (np.array): Left lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+            right_lanes (np.array): Right lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+            type: Adjust the area of specific points, type-"Top", "Bottom", "Default"
+
+        Returns:
+            None
+        """
         if (len(left_lanes) and len(right_lanes)) :
             left_lanes = np.squeeze(left_lanes)
             right_lanes = np.squeeze(right_lanes)
@@ -63,14 +77,16 @@ class PerspectiveTransformation(object):
             self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)
 
 
-    def forward(self, img, flags=cv2.INTER_LINEAR):
-        """ Take a front view image and transform to top view
-        Parameters:
-            img (np.array): A front view image
+    def transformToBirdView(self, img, flags=cv2.INTER_LINEAR):
+        """ Take a frontal view image and transform to bird view
+
+		Args:
+            img (np.array): A frontal view image
             img_size (tuple): Size of the image (width, height)
             flags : flag to use in cv2.warpPerspective()
+
         Returns:
-            Image (np.array): Top view image
+            Image (np.array): Bird view image
         """
         # new_size = ( self.img_size[0], int(self.img_size[1]/0.33))
         # img_input = cv2.resize(img, new_size).astype(np.float32)
@@ -78,8 +94,30 @@ class PerspectiveTransformation(object):
         return cv2.warpPerspective(img, self.M, self.img_size, flags=flags)
 
 
-    #Function to get data points in the new perspective from points in the image
-    def transformPoints(self, points):
+    def transformToFrontalView(self, img, flags=cv2.INTER_LINEAR):
+        """ Take a bird view image and transform it to frontal view
+
+		Args:
+            img (np.array): A bird view image
+            img_size (tuple): Size of the image (width, height)
+            flags (int): flag to use in cv2.warpPerspective()
+
+        Returns:
+            Image (np.array): Frontal view image
+        """
+        return cv2.warpPerspective(img, self.M_inv, self.img_size, flags=flags)
+    
+
+    def transformToBirdViewPoints(self, points):
+        """
+        To get bird view points in the new perspective from frontal view points in the image.
+
+		Args:
+            points: Frontal view lane points.
+
+        Returns:
+            [[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]. array shape=(xn, 2)
+        """
         points_array = []
         if (len(points)) :
             for x, y in points :
@@ -90,12 +128,27 @@ class PerspectiveTransformation(object):
             if (len(points_array)) :
                 points_array = np.array(points_array)
                 new_points = np.einsum('kl, ...l->...k', self.M,  np.concatenate([points_array, np.broadcast_to(1, (*points_array.shape[:-1], 1)) ], axis = -1) )
+               
                 return np.asarray(new_points[...,:2] / new_points[...,2][...,None], dtype = 'int')
         return []
 
 
-    # Calculate the offset from the center of the vehicle
-    def calcCurveAndOffset(self, binary_warped, left_lanes, right_lanes):
+    def calcCurveAndOffset(self, img, left_lanes, right_lanes):
+        """
+        Calculate the offset and road curve from the center of the vehicle.
+        
+        Args:
+            img: Bird view image.
+            left_lanes (np.array): Left lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+            right_lanes (np.array): Right lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+
+        Returns:
+            direction (string): Type contains "L", "R" or "F".
+            curvature (float): Road curve.
+            offset (float): Offset from the center point.
+            
+            Output format tuple(tuple(direction, curvature), offset)
+        """
         if (len(left_lanes) and len(right_lanes)) :
             left_lanes = np.squeeze(left_lanes)
             right_lanes = np.squeeze(right_lanes)
@@ -116,7 +169,7 @@ class PerspectiveTransformation(object):
                 curvature_direction = "F"
 
             # Define y-value where we want radius of curvature
-            ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
+            ploty = np.linspace(0, img.shape[0]-1, img.shape[0] )
             leftx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
             rightx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
             # print("left :", leftx[0], leftx[-1])
@@ -138,17 +191,17 @@ class PerspectiveTransformation(object):
             lane_xm_per_pix = 3.7 / lane_width
             veh_pos = ((leftx[719] + rightx[719])  / 2.)
 
-            cen_pos = (binary_warped.shape[1]/ 2.)
-            cv2.arrowedLine(binary_warped, (int(veh_pos), int(y_eval)), (int(veh_pos), int(binary_warped.shape[1]/3)), (255, 255, 255), 5, 0, 0 , 0.2)
-            cv2.arrowedLine(binary_warped, (int(cen_pos), int(y_eval)), (int(cen_pos), int(binary_warped.shape[0]/1.3)), (150, 150, 150), 10, 0, 0 , 0.5)
+            cen_pos = (img.shape[1]/ 2.)
+            cv2.arrowedLine(img, (int(veh_pos), int(y_eval)), (int(veh_pos), int(img.shape[1]/3)), (255, 255, 255), 5, 0, 0 , 0.2)
+            cv2.arrowedLine(img, (int(cen_pos), int(y_eval)), (int(cen_pos), int(img.shape[0]/1.3)), (150, 150, 150), 10, 0, 0 , 0.5)
             distance_from_center = (veh_pos - cen_pos)* lane_xm_per_pix
         else :
-            curvature_direction = None
-            curvature, distance_from_center = None, None
+            curvature_direction, curvature = None, None
+            distance_from_center = None
             return (curvature_direction, curvature), distance_from_center
 
-        cv2.putText(binary_warped,  'Offset: %.1f m' % distance_from_center, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 5)
-        cv2.putText(binary_warped,  'R : %.1f m' % curvature, (20, 180), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 5)
+        cv2.putText(img,  'Offset: %.1f m' % distance_from_center, (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 5)
+        cv2.putText(img,  'R : %.1f m' % curvature, (20, 180), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 5)
         return (curvature_direction, curvature), distance_from_center
 
 
@@ -163,13 +216,10 @@ class PerspectiveTransformation(object):
             for x, y in lane_points:
                 cv2.circle(image, (int(x), int(y)), 10, color, -1)
 
-    def backward(self, img, flags=cv2.INTER_LINEAR):
-        """ Take a top view image and transform it to front view
-        Parameters:
-            img (np.array): A top view image
-            img_size (tuple): Size of the image (width, height)
-            flags (int): flag to use in cv2.warpPerspective()
-        Returns:
-            Image (np.array): Front view image
-        """
-        return cv2.warpPerspective(img, self.M_inv, self.img_size, flags=flags)
+
+    def DrawTransformFrontalViewArea(self, image):
+        vector = np.vectorize(np.int_)
+        cv2.line(image, vector(self.src[0]), vector(self.src[1]), (0, 0, 255), 5)
+        cv2.line(image, vector(self.src[1]), vector(self.src[2]), (0, 0, 255), 5)
+        cv2.line(image, vector(self.src[2]), vector(self.src[3]), (0, 0, 255), 5)
+        cv2.line(image, vector(self.src[3]), vector(self.src[0]), (0, 0, 255), 5)

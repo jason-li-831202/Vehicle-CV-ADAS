@@ -153,7 +153,7 @@ class TaskConditions(object):
 
 	def CheckStatus(self) :
 		"""
-		Determine whether to update Bird View perspective transform(.
+		Determine whether to update Bird View perspective transform.
 
 		Args:
 			None

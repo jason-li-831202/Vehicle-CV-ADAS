@@ -21,7 +21,7 @@ lane_config = {
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov8l-coco.onnx',
+	"model_path": './ObjectDetector/models/yolov8l-coco.trt',
 	"model_type" : ObjectModelType.YOLOV8,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
@@ -110,9 +110,12 @@ class ControlPanel(object):
 		Returns:
 			main_show: Draw bird view on frame.
 		"""
-		min_top_view_show = cv2.resize(min_show, (int(main_show.shape[1]* show_ratio), int(main_show.shape[0]* show_ratio)) )
-		min_top_view_show = cv2.copyMakeBorder(min_top_view_show, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[0, 0, 0]) # 添加边框
-		main_show[0:min_top_view_show.shape[0], -min_top_view_show.shape[1]: ] = min_top_view_show
+		W = int(main_show.shape[1]* show_ratio)
+		H = int(main_show.shape[0]* show_ratio)
+
+		min_birdview_show = cv2.resize(min_show, (W, H))
+		min_birdview_show = cv2.copyMakeBorder(min_birdview_show, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[0, 0, 0]) # 添加边框
+		main_show[0:min_birdview_show.shape[0], -min_birdview_show.shape[1]: ] = min_birdview_show
 		return main_show
 	
 	def DisplaySignsPanel(self, main_show, offset_type, curvature_type) :
@@ -244,12 +247,11 @@ if __name__ == "__main__":
 	# object detection model
 	LOGGER.info("YoloDetector Model Type : {}".format(object_config["model_type"].name))
 	YoloDetector.set_defaults(object_config)
-	objectDetector = YoloDetector(LOGGER)
+	objectDetector = YoloDetector(logger=LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
 
 	# display panel
 	displayPanel = ControlPanel()
-	
 	analyzeMsg = TaskConditions()
 	while cap.isOpened():
 
@@ -257,7 +259,7 @@ if __name__ == "__main__":
 		if ret:	
 			frame_show = frame.copy()
 
-			#========================= Detect Model ========================
+			#========================== Detect Model =========================
 			obect_time = time.time()
 			objectDetector.DetectFrame(frame)
 			obect_infer_time = round(time.time() - obect_time, 2)
@@ -273,27 +275,24 @@ if __name__ == "__main__":
 
 
 			if (not laneDetector.draw_area or analyzeMsg.CheckStatus()) :
-				transformView.updateParams(laneDetector.lanes_points[1], laneDetector.lanes_points[2], analyzeMsg.transform_status)
-			top_view_show = transformView.forward(frame_show)
+				transformView.updateTransformParams(laneDetector.lanes_points[1], laneDetector.lanes_points[2], analyzeMsg.transform_status)
+			birdview_show = transformView.transformToBirdView(frame_show)
 
-			adjust_lanes_points = []
-			for lanes_point in laneDetector.lanes_points :
-				adjust_lanes_point = transformView.transformPoints(lanes_point)
-				adjust_lanes_points.append(adjust_lanes_point)
-
-			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(top_view_show, adjust_lanes_points[1], adjust_lanes_points[2])
+			birdview_lanes_points = [transformView.transformToBirdViewPoints(lanes_point) for lanes_point in laneDetector.lanes_points]
+			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(birdview_show, birdview_lanes_points[1], birdview_lanes_points[2])
 
 			analyzeMsg.UpdateOffsetStatus(vehicle_offset)
 			analyzeMsg.UpdateRouteStatus(vehicle_direction, vehicle_curvature)
 
 			#========================== Draw Results =========================
-			transformView.DrawDetectedOnBirdView(top_view_show, adjust_lanes_points, analyzeMsg.offset_msg)
+			transformView.DrawDetectedOnBirdView(birdview_show, birdview_lanes_points, analyzeMsg.offset_msg)
+			if (LOGGER.clevel == logging.DEBUG) : transformView.DrawTransformFrontalViewArea(frame_show)
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
 			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			objectDetector.DrawDetectedOnFrame(frame_show)
 			distanceDetector.DrawDetectedOnFrame(frame_show)
 
-			frame_show = displayPanel.DisplayBirdViewPanel(frame_show, top_view_show)
+			frame_show = displayPanel.DisplayBirdViewPanel(frame_show, birdview_show)
 			frame_show = displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
 			frame_show = displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
 			cv2.imshow("ADAS Simulation", frame_show)
@@ -301,7 +300,7 @@ if __name__ == "__main__":
 		else:
 			break
 		vout.write(frame_show)	
-		if cv2.waitKey(1) == ord('q'): 		# Press key q to stop
+		if cv2.waitKey(1) == ord('q'): # Press key q to stop
 			break
 
 	vout.release()
