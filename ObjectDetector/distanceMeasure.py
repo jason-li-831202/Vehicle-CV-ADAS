@@ -58,7 +58,7 @@ class SingleCamDistanceMeasure(object):
 		if ( len(boxes) != 0 )  :
 			for box, _ in boxes:
 				ymin, xmin, ymax, xmax, label = box
-				if label in self.object_list and  ymax <= 700:
+				if label in self.object_list and  ymax <= 650:
 					point_x = (xmax + xmin) // 2
 					point_y = ymax
 

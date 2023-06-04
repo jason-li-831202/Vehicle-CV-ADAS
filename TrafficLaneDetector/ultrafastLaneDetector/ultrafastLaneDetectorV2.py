@@ -208,6 +208,8 @@ class UltrafastLaneDetectorV2():
 		self._initialize_model(self.model_path, self.cfg)
 		
 	def _initialize_model(self, model_path, cfg):
+		if (self.logger) :
+			self.logger.debug("model path: %s." % model_path)
 		if not os.path.isfile(model_path):
 			raise Exception("The model path [%s] can't not found!" % model_path)
 		if model_path.endswith('.trt') :

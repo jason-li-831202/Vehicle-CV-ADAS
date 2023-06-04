@@ -38,7 +38,7 @@ class PerspectiveTransformation(object):
         """ 
         Update the transition area of the frontal view
 
-		Args:
+        Args:
             left_lanes (np.array): Left lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
             right_lanes (np.array): Right lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
             type: Adjust the area of specific points, type-"Top", "Bottom", "Default"
@@ -57,14 +57,14 @@ class PerspectiveTransformation(object):
                 top_right    = ( min(right_lanes[:, 0])+20, top_y )
             elif (type=="Bottom") :
                 top_left     = ( self.src[0][0], self.src[0][1] )
-                bottom_left  = ( min(left_lanes[:, 0]), max(left_lanes[:, 1]) )
-                bottom_right = ( max(right_lanes[:, 0]), max(right_lanes[:, 1]) )
+                bottom_left  = ( min(left_lanes[:, 0]), self.src[1][1] )
+                bottom_right = ( max(right_lanes[:, 0]), self.src[2][1] )
                 top_right    =  ( self.src[3][0], self.src[3][1] )
             elif (type=="Default") :
                 top_y = min(min(left_lanes[:, 1]), min(right_lanes[:, 1]))
                 top_left     = ( max(left_lanes[:, 0])-20, top_y )
-                bottom_left  = ( min(left_lanes[:, 0]), max(left_lanes[:, 1]) )
-                bottom_right = ( max(right_lanes[:, 0]), max(right_lanes[:, 1]) )
+                bottom_left  = ( min(left_lanes[:, 0]), self.src[1][1] )
+                bottom_right = ( max(right_lanes[:, 0]), self.src[2][1] )
                 top_right    = ( min(right_lanes[:, 0])+20, top_y)
             else :
                 return 
@@ -80,7 +80,7 @@ class PerspectiveTransformation(object):
     def transformToBirdView(self, img, flags=cv2.INTER_LINEAR):
         """ Take a frontal view image and transform to bird view
 
-		Args:
+        Args:
             img (np.array): A frontal view image
             img_size (tuple): Size of the image (width, height)
             flags : flag to use in cv2.warpPerspective()
@@ -97,7 +97,7 @@ class PerspectiveTransformation(object):
     def transformToFrontalView(self, img, flags=cv2.INTER_LINEAR):
         """ Take a bird view image and transform it to frontal view
 
-		Args:
+        Args:
             img (np.array): A bird view image
             img_size (tuple): Size of the image (width, height)
             flags (int): flag to use in cv2.warpPerspective()
@@ -112,7 +112,7 @@ class PerspectiveTransformation(object):
         """
         To get bird view points in the new perspective from frontal view points in the image.
 
-		Args:
+        Args:
             points: Frontal view lane points.
 
         Returns:
