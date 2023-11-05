@@ -25,7 +25,7 @@ class YoloLiteParameters():
 		self.anchor_grid = np.asarray(anchors, dtype=np.float32).reshape(self.nl, -1, 2)
 		self.input_shape = input_shape
 
-	def _make_grid(self, nx=20, ny=20):
+	def __make_grid(self, nx=20, ny=20):
 		xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
 		return np.stack((xv, yv), 2).reshape((-1, 2)).astype(np.float32)
 
@@ -35,7 +35,7 @@ class YoloLiteParameters():
 			h, w = int(self.input_shape[0] / self.stride[i]), int(self.input_shape[1] / self.stride[i])
 			length = int(self.na * h * w)
 			if self.grid[i].shape[2:4] != (h, w):
-				self.grid[i] = self._make_grid(w, h)
+				self.grid[i] = self.__make_grid(w, h)
 
 			outs[row_ind:row_ind + length, 0:2] = (outs[row_ind:row_ind + length, 0:2] * 2. - 0.5 + np.tile(
 				self.grid[i], (self.na, 1))) * int(self.stride[i])
@@ -62,8 +62,8 @@ class TensorRTParameters():
 		with open(engine_file_path, "rb") as f:
 			engine = runtime.deserialize_cuda_engine(f.read())
 
-		self.context =  self._create_context(engine)
-		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self._allocate_buffers(engine)
+		self.context =  self.__create_context(engine)
+		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self.__allocate_buffers(engine)
 		self.input_shapes = engine.get_binding_shape(0)[-2:]
 		self.dtype = trt.nptype(engine.get_binding_dtype(0))
 
@@ -71,7 +71,7 @@ class TensorRTParameters():
 		self.stream = stream
 		self.engine = engine
 
-	def _allocate_buffers(self, engine):
+	def __allocate_buffers(self, engine):
 		"""Allocates all host/device in/out buffers required for an engine."""
 		host_inputs = []
 		cuda_inputs = []
@@ -96,7 +96,7 @@ class TensorRTParameters():
 				cuda_outputs.append(cuda_mem)
 		return host_inputs, cuda_inputs, host_outputs, cuda_outputs, bindings
 
-	def _create_context(self, engine):
+	def __create_context(self, engine):
 		return engine.create_execution_context()
 
 	def postprocess(self, input_image):
@@ -181,7 +181,7 @@ class YoloDetector(object):
 			self._load_model_tensorrt(model_path) 
 		else :
 			self.framework_type = "onnx"
-			self._load_model_onnxruntime_version(model_path)
+			self._load_model_onnxruntime(model_path)
 		
 		if (self.model_type == ObjectModelType.YOLOV5_LITE) :
 			self.lite = True
@@ -207,7 +207,7 @@ class YoloDetector(object):
 		else:
 			self.input_shapes = tuple(np.array([[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]).flatten())[-2:]
 
-	def _load_model_onnxruntime_version(self, model_path) :
+	def _load_model_onnxruntime(self, model_path) :
 		self._get_onnx_model_shape(model_path)
 		if  ort.get_device() == 'GPU' and 'CUDAExecutionProvider' in  ort.get_available_providers():  # gpu 
 			self.providers = 'CUDAExecutionProvider'
@@ -227,6 +227,14 @@ class YoloDetector(object):
 		self.input_shapes = self.session.input_shapes
 		self.providers = 'CUDAExecutionProvider'
 
+	@property
+	def object_info(self) :
+		if not hasattr(self, '_object_info') :
+			self._object_info = []
+			self.logger.war("Can't get object information, maybe you forget to use detect api.")
+		
+		return self._object_info
+	
 	def resize_image_format(self, srcimg, frame_resize):
 		padh, padw, newh, neww = 0, 0, frame_resize[0], frame_resize[1]
 		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
@@ -392,12 +400,13 @@ class YoloDetector(object):
 
 		bounding_boxes = self.get_boxes_coordinate( bounding_boxes, ratiow, ratioh, padh, padw)
 		kpss = self.get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw)
-		self.object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
+		self._object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
+
 
 	def DrawDetectedOnFrame(self, frame_show) :
 		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1    # line/font thickness
-		if ( len(self.object_info) != 0 )  :
-			for box, kpss in self.object_info:
+		if ( len(self._object_info) != 0 )  :
+			for box, kpss in self._object_info:
 				ymin, xmin, ymax, xmax, label = box
 				if (len(kpss) != 0) :
 					for kp in kpss :
@@ -421,7 +430,7 @@ if __name__ == "__main__":
 	import time
 	import sys
 
-	capture = cv2.VideoCapture(r"./temp/歐森隆20210923-Lobby-1.avi")
+	capture = cv2.VideoCapture(r"./temp/test.avi")
 	config = {
 		"model_path": 'models/yolov5m-coco.trt',
 		"model_type" : ObjectModelType.YOLOV5,

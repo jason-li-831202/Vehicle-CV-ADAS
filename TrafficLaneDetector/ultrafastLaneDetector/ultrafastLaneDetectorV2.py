@@ -423,7 +423,7 @@ class UltrafastLaneDetectorV2():
 					lanes_points["right-side"].extend(tmp)
 					if (len(tmp) > 2) :
 						lanes_detected["right-side"] = True
-		return np.array(list(lanes_points.values())), list(lanes_detected.values())
+		return np.array(list(lanes_points.values()), dtype="object"), list(lanes_detected.values())
 
 	@staticmethod
 	def draw_lanes(input_img, lanes_points, lanes_detected, cfg, draw_points=True, original_image_width = 1640, original_image_height = 590):

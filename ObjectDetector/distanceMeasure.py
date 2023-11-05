@@ -19,7 +19,7 @@ class SingleCamDistanceMeasure(object):
 		self.f = 100 # focal length
 		self.distance_points = []
 
-	def _isInsidePolygon(self, pt, poly ):
+	def __isInsidePolygon(self, pt, poly ):
 		"""
 		Judgment point is within the polygon range.
 
@@ -82,7 +82,7 @@ class SingleCamDistanceMeasure(object):
 
 		if ( len(self.distance_points) != 0 and len(poly) )  :
 			for x, y, d in self.distance_points:
-				if (self._isInsidePolygon( (x, y), np.squeeze(poly) )) :
+				if (self.__isInsidePolygon( (x, y), np.squeeze(poly) )) :
 					return [x, y, d]
 		return None
 
