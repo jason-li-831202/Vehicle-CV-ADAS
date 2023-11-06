@@ -46,6 +46,9 @@ class PerspectiveTransformation(object):
         Returns:
             None
         """
+        if not (isinstance(left_lanes, list) and isinstance(right_lanes, list)) : 
+            raise TypeError('lanes must be list type.')
+
         if (len(left_lanes) and len(right_lanes)) :
             left_lanes = np.squeeze(left_lanes)
             right_lanes = np.squeeze(right_lanes)

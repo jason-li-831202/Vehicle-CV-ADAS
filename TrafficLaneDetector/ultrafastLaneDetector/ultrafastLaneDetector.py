@@ -38,6 +38,8 @@ class TensorRTEngine():
 
 	def __init__(self, engine_file_path, cfg):
 		self.cfg = cfg
+		self.providers = 'CUDAExecutionProvider'
+		self.framework_type = "trt"
 		# Create a Context on this device,
 		cuda.init()
 		device = cuda.Device(0)
@@ -85,13 +87,13 @@ class TensorRTEngine():
 	def _create_context(self, engine):
 		return engine.create_execution_context()
 
-	def  get_tensorrt_input_shape(self):
+	def get_tensorrt_input_shape(self):
 		return self.engine.get_binding_shape(0)
 
-	def  get_tensorrt_output_shape(self):
+	def get_tensorrt_output_shape(self):
 		return (1, 1, self.cfg.cls_num_per_lane, self.cfg.num_lanes)
 
-	def inference(self, input_tensor):
+	def tensorrt_inference(self, input_tensor):
 		self.cuda_driver_context.push()
 		# Restore
 		stream = self.stream
@@ -127,24 +129,25 @@ class OnnxEngine():
 		else :
 			self.session = onnxruntime.InferenceSession(onnx_file_path)
 		self.providers = self.session.get_providers()
+		self.framework_type = "onnx"
 
-	def  get_onnx_input_shape(self):
+	def get_onnx_input_shape(self):
 		return self.session.get_inputs()[0].shape
 
-	def  get_onnx_output_shape(self):
+	def get_onnx_output_shape(self):
 		output_shape = [output.shape for output in self.session.get_outputs()]
 		output_names = [output.name for output in self.session.get_outputs()]
 		if (len(output_names) != 1) :
 			raise Exception("Output dims is error, please check model. load %d channels not match 1." % len(self.output_names))
 		return output_shape[0], output_names
 	
-	def inference(self, input_tensor):
+	def onnx_inference(self, input_tensor):
 		input_name = self.session.get_inputs()[0].name
 		output_name = self.session.get_outputs()[0].name
 		output = self.session.run([output_name], {input_name: input_tensor})
 		return output
 
-class UltrafastLaneDetector():
+class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 	_defaults = {
 		"model_path": "models/tusimple_18.onnx",
 		"model_type" : LaneModelType.UFLD_TUSIMPLE,
@@ -177,6 +180,7 @@ class UltrafastLaneDetector():
 			if (self.logger) :
 				self.logger.error("UltrafastLaneDetector can use %s type." % self.model_type.name)
 			raise Exception("UltrafastLaneDetector can use %s type." % self.model_type.name)
+		
 		self.fps = 0
 		self.timeLastPrediction = time.time()
 		self.frameCounter = 0
@@ -196,13 +200,9 @@ class UltrafastLaneDetector():
 		if not os.path.isfile(model_path):
 			raise Exception("The model path [%s] can't not found!" % model_path)
 		if model_path.endswith('.trt') :
-			self.framework_type = "trt"
-			self.infer = TensorRTEngine(model_path, cfg)
-			self.providers = 'CUDAExecutionProvider'
+			TensorRTEngine.__init__(self, model_path, cfg)
 		else :
-			self.framework_type = "onnx"
-			self.infer = OnnxEngine(model_path)
-			self.providers = self.infer.providers
+			OnnxEngine.__init__(self, self.model_path)
 
 		# Get model info
 		self.getModel_input_details()
@@ -212,18 +212,19 @@ class UltrafastLaneDetector():
 
 	def getModel_input_details(self):
 		if (self.framework_type == "trt") :
-			self.input_shape = self.infer.get_tensorrt_input_shape()
+			self.input_shape = self.get_tensorrt_input_shape()
 		else :
-			self.input_shape = self.infer.get_onnx_input_shape()
+			self.input_shape = self.get_onnx_input_shape()
 		self.channes = self.input_shape[2]
 		self.input_height = self.input_shape[2]
 		self.input_width = self.input_shape[3]
 
 	def getModel_output_details(self):
 		if (self.framework_type == "trt") :
-			self.output_shape = self.infer.get_tensorrt_output_shape()
+			self.output_shape = self.get_tensorrt_output_shape()
 		else :
-			self.output_shape, self.output_names = self.infer.get_onnx_output_shape()
+			self.output_shape, self.output_names = self.get_onnx_output_shape()
+
 		self.num_points = self.output_shape[1]
 		self.num_anchors = self.output_shape[2]
 		self.num_lanes = self.output_shape[3]
@@ -247,8 +248,9 @@ class UltrafastLaneDetector():
 
 	def DetectFrame(self, image) :
 		input_tensor = self.prepare_input(image)
+
 		# Perform inference on the image
-		output = self.infer.inference(input_tensor)
+		output = self.tensorrt_inference(input_tensor) if (self.framework_type == "trt") else self.onnx_inference(input_tensor)
 
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.process_output(output, self.cfg)
@@ -284,7 +286,7 @@ class UltrafastLaneDetector():
 		input_tensor = self.prepare_input(image)
 
 		# Perform inference on the image
-		output = self.infer.inference(input_tensor)
+		output = self.tensorrt_inference(input_tensor) if (self.framework_type == "trt") else self.onnx_inference(input_tensor)
 
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.process_output(output, self.cfg)

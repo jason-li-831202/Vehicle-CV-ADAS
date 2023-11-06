@@ -221,6 +221,8 @@ if __name__ == "__main__":
 
 	# Initialize read and save video 
 	cap = cv2.VideoCapture(video_path)
+	if (not cap.isOpened()) :
+		raise Exception("video path is error. please check it.")
 	width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) 
 	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
