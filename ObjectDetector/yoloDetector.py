@@ -15,7 +15,10 @@ except :
 	from ObjectDetector.utils import ObjectModelType, hex_to_rgb
 
 class YoloLiteParameters():
-	def __init__(self, input_shape, num_classes):
+	def __init__(self, model_type, input_shape, num_classes):
+		self.lite = False
+		if (model_type == ObjectModelType.YOLOV5_LITE) :
+			self.lite = True
 		anchors = [[10, 13, 16, 30, 33, 23], [30, 61, 62, 45, 59, 119], [116, 90, 156, 198, 373, 326]]
 		self.nl = len(anchors)
 		self.na = len(anchors[0]) // 2
@@ -29,19 +32,20 @@ class YoloLiteParameters():
 		xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
 		return np.stack((xv, yv), 2).reshape((-1, 2)).astype(np.float32)
 
-	def postprocess(self, outs):
-		row_ind = 0
-		for i in range(self.nl):
-			h, w = int(self.input_shape[0] / self.stride[i]), int(self.input_shape[1] / self.stride[i])
-			length = int(self.na * h * w)
-			if self.grid[i].shape[2:4] != (h, w):
-				self.grid[i] = self.__make_grid(w, h)
+	def lite_postprocess(self, outs):
+		if self.lite :
+			row_ind = 0
+			for i in range(self.nl):
+				h, w = int(self.input_shape[0] / self.stride[i]), int(self.input_shape[1] / self.stride[i])
+				length = int(self.na * h * w)
+				if self.grid[i].shape[2:4] != (h, w):
+					self.grid[i] = self.__make_grid(w, h)
 
-			outs[row_ind:row_ind + length, 0:2] = (outs[row_ind:row_ind + length, 0:2] * 2. - 0.5 + np.tile(
-				self.grid[i], (self.na, 1))) * int(self.stride[i])
-			outs[row_ind:row_ind + length, 2:4] = (outs[row_ind:row_ind + length, 2:4] * 2) ** 2 * np.repeat(
-				self.anchor_grid[i], h * w, axis=0)
-			row_ind += length
+				outs[row_ind:row_ind + length, 0:2] = (outs[row_ind:row_ind + length, 0:2] * 2. - 0.5 + np.tile(
+					self.grid[i], (self.na, 1))) * int(self.stride[i])
+				outs[row_ind:row_ind + length, 2:4] = (outs[row_ind:row_ind + length, 2:4] * 2) ** 2 * np.repeat(
+					self.anchor_grid[i], h * w, axis=0)
+				row_ind += length
 		return outs
 
 class TensorRTParameters():
@@ -131,7 +135,7 @@ class TensorRTParameters():
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
 
 
-class YoloDetector(object):
+class YoloDetector(YoloLiteParameters):
 	_defaults = {
 		"model_path": './models/yolov5n-coco.onnx',
 		"model_type" : ObjectModelType.YOLOV5,
@@ -160,7 +164,6 @@ class YoloDetector(object):
 		self.__dict__.update(kwargs) # and update with user overrides
 		self.logger = logger
 		self.keep_ratio = False
-		self.lite =  False
 		
 		classes_path = os.path.expanduser(self.classes_path)
 		if (self.logger) :
@@ -182,12 +185,11 @@ class YoloDetector(object):
 		else :
 			self.framework_type = "onnx"
 			self._load_model_onnxruntime(model_path)
-		
-		if (self.model_type == ObjectModelType.YOLOV5_LITE) :
-			self.lite = True
+
+		YoloLiteParameters.__init__(self, self.model_type, self.input_shapes, len(self.class_names))
 		if (self.logger) :
 			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
-		self.liteParams = YoloLiteParameters(self.input_shapes, len(self.class_names))
+		
 
 	def _get_class(self, classes_path):
 		with open(classes_path) as f:
@@ -376,8 +378,7 @@ class YoloDetector(object):
 		if (self.model_type == ObjectModelType.YOLOV8) :
 			output_from_network = output_from_network.T
 		
-		if self.lite :
-			output_from_network = self.liteParams.postprocess(output_from_network)
+		output_from_network = self.lite_postprocess(output_from_network)
 
 		# inference output
 		for detection in output_from_network:
