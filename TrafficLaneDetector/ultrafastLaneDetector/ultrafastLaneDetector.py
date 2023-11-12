@@ -196,6 +196,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 
 	def DrawAreaOnFrame(self, image, color=(255,191,0)) :
 		self.draw_area = False
+		H, W, _ = image.shape
 		# Draw a mask for the current lane
 		if(self.lanes_detected != []) :
 			if(self.lanes_detected[1] and self.lanes_detected[2]):
@@ -204,8 +205,8 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 				left_lanes_points, right_lanes_points = self.adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
 				self.draw_area_points = [np.vstack((left_lanes_points,np.flipud(right_lanes_points)))]
 				cv2.fillPoly(lane_segment_img, pts = self.draw_area_points, color =color)
-				image = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
-
+				combine = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
+				image[:H,:W,:] = combine
 		if (not self.draw_area) : self.draw_area_points = []
 		return image
 

@@ -403,7 +403,6 @@ class YoloDetector(YoloLiteParameters):
 		kpss = self.get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw)
 		self._object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
 
-
 	def DrawDetectedOnFrame(self, frame_show) :
 		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1    # line/font thickness
 		if ( len(self._object_info) != 0 )  :

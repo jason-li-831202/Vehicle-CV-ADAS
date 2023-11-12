@@ -116,8 +116,7 @@ class ControlPanel(object):
 		min_birdview_show = cv2.resize(min_show, (W, H))
 		min_birdview_show = cv2.copyMakeBorder(min_birdview_show, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=[0, 0, 0]) # 添加边框
 		main_show[0:min_birdview_show.shape[0], -min_birdview_show.shape[1]: ] = min_birdview_show
-		return main_show
-	
+
 	def DisplaySignsPanel(self, main_show, offset_type, curvature_type) :
 		"""
 		Display Signs Panel on image.
@@ -174,7 +173,6 @@ class ControlPanel(object):
 		cv2.putText(main_show, "LDWS : " + offset_type.value, (10, 240), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7, color=self.OffsetDict[offset_type], thickness=2)
 		cv2.putText(main_show, "LKAS : " + curvature_type.value, org=(10, 280), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7, color=self.CurvatureDict[curvature_type], thickness=2)
 		cv2.putText(main_show, "FPS  : %.2f" % self.fps, (10, widget.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
-		return main_show
 
 	def DisplayCollisionPanel(self, main_show, collision_type, obect_infer_time, lane_infer_time, show_ratio=0.25) :
 		"""
@@ -214,7 +212,6 @@ class ControlPanel(object):
 		cv2.putText(main_show, "FCWS : " + collision_type.value, ( main_show.shape[1]- int(W) + 100 , 240), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.6, color=self.CollisionDict[collision_type], thickness=2)
 		cv2.putText(main_show, "object-infer : %.2f s" % obect_infer_time, ( main_show.shape[1]- int(W) + 100, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1, cv2.LINE_AA)
 		cv2.putText(main_show, "lane-infer : %.2f s" % lane_infer_time, ( main_show.shape[1]- int(W) + 100, 320), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (230, 230, 230), 1, cv2.LINE_AA)
-		return main_show
 
 
 if __name__ == "__main__":
@@ -290,13 +287,13 @@ if __name__ == "__main__":
 			transformView.DrawDetectedOnBirdView(birdview_show, birdview_lanes_points, analyzeMsg.offset_msg)
 			if (LOGGER.clevel == logging.DEBUG) : transformView.DrawTransformFrontalViewArea(frame_show)
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
-			frame_show = laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
+			laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			objectDetector.DrawDetectedOnFrame(frame_show)
 			distanceDetector.DrawDetectedOnFrame(frame_show)
 
-			frame_show = displayPanel.DisplayBirdViewPanel(frame_show, birdview_show)
-			frame_show = displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
-			frame_show = displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
+			displayPanel.DisplayBirdViewPanel(frame_show, birdview_show)
+			displayPanel.DisplaySignsPanel(frame_show, analyzeMsg.offset_msg, analyzeMsg.curvature_msg)	
+			displayPanel.DisplayCollisionPanel(frame_show, analyzeMsg.collision_msg, obect_infer_time, lane_infer_time )
 			cv2.imshow("ADAS Simulation", frame_show)
 
 		else:
