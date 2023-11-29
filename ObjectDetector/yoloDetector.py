@@ -190,7 +190,6 @@ class YoloDetector(YoloLiteParameters):
 		if (self.logger) :
 			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
 		
-
 	def _get_class(self, classes_path):
 		with open(classes_path) as f:
 			class_names = f.readlines()
@@ -257,7 +256,8 @@ class YoloDetector(YoloLiteParameters):
 		ratioh, ratiow = srcimg.shape[0] / newh, srcimg.shape[1] / neww
 		return img, newh, neww, ratioh, ratiow, padh, padw
 
-	def adjust_boxes_ratio(self, bounding_box, ratio, stretch_type) :
+	@staticmethod
+	def adjust_boxes_ratio(bounding_box, ratio, stretch_type) :
 		""" Adjust the aspect ratio of the box according to the orientation """
 		xmin, ymin, width, height = bounding_box 
 		width = int(width)
@@ -297,14 +297,16 @@ class YoloDetector(YoloLiteParameters):
 			xmax = xmin + changewidth
 		return (xmin, ymin, xmax, ymax)
 
-	def get_kpss_coordinate(self, kpss, ratiow, ratioh, padh, padw ) :
+	@staticmethod
+	def get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw ) :
 		if (kpss != []) :
 			kpss = np.vstack(kpss)
 			kpss[:, :, 0] = (kpss[:, :, 0] - padw) * ratiow
 			kpss[:, :, 1] = (kpss[:, :, 1] - padh) * ratioh
 		return kpss
 
-	def get_boxes_coordinate(self, bounding_boxes, ratiow, ratioh, padh, padw ) :
+	@staticmethod
+	def get_boxes_coordinate(bounding_boxes, ratiow, ratioh, padh, padw ) :
 		if (bounding_boxes != []) :
 			bounding_boxes = np.vstack(bounding_boxes)
 			bounding_boxes[:, 2:4] = bounding_boxes[:, 2:4] - bounding_boxes[:, 0:2]
@@ -313,6 +315,28 @@ class YoloDetector(YoloLiteParameters):
 			bounding_boxes[:, 2] = bounding_boxes[:, 2] * ratiow
 			bounding_boxes[:, 3] = bounding_boxes[:, 3] * ratioh
 		return bounding_boxes
+
+	@staticmethod
+	def cornerRect(img, bbox, t=5, rt=1, colorR=(255, 0, 255), colorC=(0, 255, 0)):
+		ymin, xmin, ymax, xmax, label = bbox
+		l = max(1, int(min( (ymax-ymin), (xmax-xmin))*0.2))
+
+		if rt != 0:
+			cv2.rectangle(img, (xmin, ymin), (xmax, ymax), colorR, rt)
+		# Top Left  xmin, ymin
+		cv2.line(img,  (xmin, ymin), (xmin + l, ymin), colorC, t)
+		cv2.line(img,  (xmin, ymin), (xmin, ymin + l), colorC, t)
+		# Top Right  xmax, ymin
+		cv2.line(img, (xmax, ymin), (xmax - l, ymin), colorC, t)
+		cv2.line(img, (xmax, ymin), (xmax, ymin + l), colorC, t)
+		# Bottom Left  xmin, ymax
+		cv2.line(img, (xmin, ymax), (xmin + l, ymax), colorC, t)
+		cv2.line(img, (xmin, ymax), (xmin, ymax - l), colorC, t)
+		# Bottom Right  xmax, ymax
+		cv2.line(img, (xmax, ymax), (xmax - l, ymax), colorC, t)
+		cv2.line(img, (xmax, ymax), (xmax, ymax - l), colorC, t)
+
+		return img
 
 	def get_nms_results(self, bounding_boxes, confidences, class_ids, kpss, score, iou, priority=False):
 		results = []
@@ -336,27 +360,6 @@ class YoloDetector(YoloLiteParameters):
 		if (priority and len(results) > 0) :
 			results = [results[0]]
 		return results
-
-	def cornerRect(self, img, bbox, t=5, rt=1, colorR=(255, 0, 255), colorC=(0, 255, 0)):
-		ymin, xmin, ymax, xmax, label = bbox
-		l = max(1, int(min( (ymax-ymin), (xmax-xmin))*0.2))
-
-		if rt != 0:
-			cv2.rectangle(img, (xmin, ymin), (xmax, ymax), colorR, rt)
-		# Top Left  xmin, ymin
-		cv2.line(img,  (xmin, ymin), (xmin + l, ymin), colorC, t)
-		cv2.line(img,  (xmin, ymin), (xmin, ymin + l), colorC, t)
-		# Top Right  xmax, ymin
-		cv2.line(img, (xmax, ymin), (xmax - l, ymin), colorC, t)
-		cv2.line(img, (xmax, ymin), (xmax, ymin + l), colorC, t)
-		# Bottom Left  xmin, ymax
-		cv2.line(img, (xmin, ymax), (xmin + l, ymax), colorC, t)
-		cv2.line(img, (xmin, ymax), (xmin, ymax - l), colorC, t)
-		# Bottom Right  xmax, ymax
-		cv2.line(img, (xmax, ymax), (xmax - l, ymax), colorC, t)
-		cv2.line(img, (xmax, ymax), (xmax, ymax - l), colorC, t)
-
-		return img
 
 	def DetectFrame(self, srcimg) :
 		kpss = []
