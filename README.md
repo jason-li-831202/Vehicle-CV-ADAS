@@ -45,7 +45,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
     Need to modify `onnx_model_path` and `trt_model_path` before converting.
 
     ```
-    python convertOnnxToTensorRT.py
+    python convertOnnxToTensorRT.py -i <path-of-your-onnx-model>  -o <path-of-your-trt-model>
     ```
 
  * ***Video inference*** :

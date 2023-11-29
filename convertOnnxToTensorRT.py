@@ -2,28 +2,30 @@ import tensorrt as trt
 import sys, os
 import argparse
 
-
-import tensorrt as trt
-import sys
-
 """
 takes in onnx model
 converts to tensorrt
 """
 
 if __name__ == '__main__':
-	onnx_model_path = "./ObjectDetector/models/yolov8m-coco.onnx"
-	trt_model_path = "./ObjectDetector/models/yolov8m-coco.trt"
 
+	parser = argparse.ArgumentParser(description='https://github.com/jason-li-831202/Vehicle-CV-ADAS')
+	parser.add_argument('--input_onnx_model', '-i', default="./ObjectDetector/models/yolov8m-coco.onnx", type=str, help='onnx model path.')
+	parser.add_argument('--output_trt_model', '-o', default="./ObjectDetector/models/yolov8m-coco.trt", type=str, help='trt model path.')
+	args = parser.parse_args()
+	
+
+	onnx_model_path = args.input_onnx_model
+	trt_model_path = args.output_trt_model
 	if not os.path.isfile(onnx_model_path):
 		print("File=[ %s ] is not exist. Please check it !" %onnx_model_path )
 		sys.exit()
 
 	logger = trt.Logger(trt.Logger.INFO)
 	EXPLICIT_BATCH = []
+	print("trt version : ", trt.__version__)
 	if trt.__version__[0] >= '7':
-		EXPLICIT_BATCH.append(
-			1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+		EXPLICIT_BATCH.append( 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH) )
 
 	with trt.Builder(logger) as builder, builder.create_network(*EXPLICIT_BATCH) as network, trt.OnnxParser(network, logger) as parser:
 		with open(onnx_model_path, 'rb') as f:
@@ -33,9 +35,7 @@ if __name__ == '__main__':
 				sys.exit()
 			
 		# reshape input from 32 to 1
-		print('network', network)
 		shape = list(network.get_input(0).shape)
-		print('shape', shape)
 
 		profile = builder.create_optimization_profile()
 		# FIXME: Hardcoded for ImageNet. The minimum/optimum/maximum dimensions of a dynamic input tensor are the same.
