@@ -3,9 +3,9 @@ import cv2
 import time, os
 import numpy as np
 try :
-	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors, tusimple_row_anchor, culane_row_anchor
+	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors
 except :
-	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors, tusimple_row_anchor, culane_row_anchor
+	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
 
 def _softmax(x) :
 	exp_x = np.exp(x)
@@ -17,23 +17,31 @@ class ModelConfig():
 
 		if model_type == LaneModelType.UFLDV2_TUSIMPLE:
 			self.init_tusimple_config()
-		else:
+		elif model_type == LaneModelType.UFLDV2_CURVELANES :
+			self.init_curvelanes_config()
+		else :
 			self.init_culane_config()
 		self.num_lanes = 4
 
 	def init_tusimple_config(self):
 		self.img_w = 800
 		self.img_h = 320
-		self.row_anchor = tusimple_row_anchor
 		self.griding_num = 100
 		self.crop_ratio = 0.8
 		self.row_anchor = np.linspace(160,710, 56)/720
 		self.col_anchor = np.linspace(0,1, 41)
 
+	def init_curvelanes_config(self) :
+		self.img_w = 1600
+		self.img_h = 800
+		self.griding_num = 200
+		self.crop_ratio = 0.8
+		self.row_anchor = np.linspace(0.4, 1, 72)
+		self.col_anchor = np.linspace(0, 1, 81)
+	
 	def init_culane_config(self):
 		self.img_w = 1600
 		self.img_h = 320
-		self.row_anchor = culane_row_anchor
 		self.griding_num = 200
 		self.crop_ratio = 0.6
 		self.row_anchor = np.linspace(0.42,1, 72)
@@ -121,12 +129,9 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 
 		if ( self.model_type not in [LaneModelType.UFLDV2_TUSIMPLE, LaneModelType.UFLDV2_CULANE]) :
 			if (self.logger) :
-				self.logger.error("UltrafastLaneDetectorV2 can use %s type." % self.model_type.name)
-			raise Exception("UltrafastLaneDetectorV2 can use %s type." % self.model_type.name)
+				self.logger.error("UltrafastLaneDetectorV2 can't use %s type." % self.model_type.name)
+			raise Exception("UltrafastLaneDetectorV2 can't use %s type." % self.model_type.name)
 
-		self.fps = 0
-		self.timeLastPrediction = time.time()
-		self.frameCounter = 0
 		self.draw_area_points = []
 		self.draw_area = False
 

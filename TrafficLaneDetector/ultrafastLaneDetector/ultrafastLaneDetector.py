@@ -4,9 +4,9 @@ import cv2
 import time, os
 import numpy as np
 try :
-	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors, tusimple_row_anchor, culane_row_anchor
+	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors
 except :
-	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors, tusimple_row_anchor, culane_row_anchor
+	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
 
 class ModelConfig():
 
@@ -21,16 +21,16 @@ class ModelConfig():
 	def init_tusimple_config(self):
 		self.img_w = 1280
 		self.img_h = 720
-		self.row_anchor = tusimple_row_anchor
 		self.griding_num = 100
 		self.cls_num_per_lane = 56
-
+		self.row_anchor = np.linspace(64, 284, self.cls_num_per_lane)
+		
 	def init_culane_config(self):
 		self.img_w = 1640
 		self.img_h = 590
-		self.row_anchor = culane_row_anchor
 		self.griding_num = 200
 		self.cls_num_per_lane = 18
+		self.row_anchor = np.linspace(121, 131, self.cls_num_per_lane)
 
 class TensorRTEngine(TensorRTBase):
 
@@ -106,12 +106,9 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		self.logger = logger
 		if ( self.model_type not in [LaneModelType.UFLD_TUSIMPLE, LaneModelType.UFLD_CULANE]) :
 			if (self.logger) :
-				self.logger.error("UltrafastLaneDetector can use %s type." % self.model_type.name)
-			raise Exception("UltrafastLaneDetector can use %s type." % self.model_type.name)
+				self.logger.error("UltrafastLaneDetector can't use %s type." % self.model_type.name)
+			raise Exception("UltrafastLaneDetector can't use %s type." % self.model_type.name)
 		
-		self.fps = 0
-		self.timeLastPrediction = time.time()
-		self.frameCounter = 0
 		self.draw_area_points = []
 		self.draw_area = False
 		
