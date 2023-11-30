@@ -3,6 +3,7 @@ import scipy.special
 import cv2
 import time, os
 import numpy as np
+from typing import Tuple
 try :
 	from ultrafastLaneDetector.utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
 except :
@@ -96,7 +97,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		else:
 			return "Unrecognized attribute name '" + n + "'"
 
-	def __init__(self, model_path=None, model_type=None, logger=None):
+	def __init__(self, model_path : str = None, model_type : LaneModelType = None, logger = None):
 		if (None in [model_path, model_type]) :
 			self.__dict__.update(self._defaults) # set up default values
 		else :
@@ -116,7 +117,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		# Initialize model
 		self._initialize_model(self.model_path, self.cfg)
 		
-	def _initialize_model(self, model_path, cfg):
+	def _initialize_model(self, model_path : str, cfg : ModelConfig) -> None:
 		if (self.logger) :
 			self.logger.debug("model path: %s." % model_path)
 		if not os.path.isfile(model_path):
@@ -132,7 +133,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		if (self.logger) :
 			self.logger.info(f'UfldDetector Type : [{self.framework_type}] || Version : {self.providers}')
 
-	def __prepare_input(self, image):
+	def __prepare_input(self, image : cv2) -> np.ndarray :
 		img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 		self.img_height, self.img_width, self.img_channels = img.shape
 
@@ -150,7 +151,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		return img_input.astype(np.float32)
 
 	@staticmethod
-	def __process_output(output, cfg):		
+	def __process_output(output, cfg : ModelConfig) -> np.ndarray:		
 		# Parse the output of the model
 
 		processed_output = np.squeeze(output[0])
@@ -178,7 +179,6 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 			lane_points = []
 			# Check if there are any points detected in the lane
 			if np.sum(processed_output[:, lane_num] != 0) > 2:
-
 				lanes_detected.append(True)
 
 				# Process each of the points for each lane
@@ -193,7 +193,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		return np.array(lanes_points, dtype=object), np.array(lanes_detected, dtype=object)
 	
 	@staticmethod
-	def __adjust_lanes_points(left_lanes_points, right_lanes_points, image_height) :
+	def __adjust_lanes_points(left_lanes_points : list, right_lanes_points : list, image_height : list) -> Tuple[list, list]:
 		if (len(left_lanes_points[1]) != 0 ) :
 			leftx, lefty  = list(zip(*left_lanes_points))
 		else :
@@ -238,16 +238,19 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 				# cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
 		return fix_left_lanes_points, fix_right_lanes_points
 
-	def getModel_input_details(self):
+	def getModel_input_details(self) -> None :
 		if (self.framework_type == "trt") :
 			self.input_shape = self.get_tensorrt_input_shape()
 		else :
 			self.input_shape = self.get_onnx_input_shape()
-		self.channes = self.input_shape[2]
-		self.input_height = self.input_shape[2]
-		self.input_width = self.input_shape[3]
+		self.channes, self.input_height, self.input_width = self.input_shape[1:]
+		if (self.logger) : 
+			if (self.cfg.img_h == self.input_height and self.cfg.img_w == self.input_width) :
+				self.logger.info(f"UfldDetector Input Shape : {self.input_shape} ")
+			else :
+				self.logger.war(f"UfldDetector Model Iuput Shape {self.input_height, self.input_width} not equal cfg Input Shape {self.cfg.img_h, self.cfg.img_w}")
 
-	def getModel_output_details(self):
+	def getModel_output_details(self) -> None :
 		if (self.framework_type == "trt") :
 			self.output_shape = self.get_tensorrt_output_shape()
 		else :
@@ -257,7 +260,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		self.num_anchors = self.output_shape[2]
 		self.num_lanes = self.output_shape[3]
 
-	def DetectFrame(self, image) :
+	def DetectFrame(self, image : cv2) -> None:
 		input_tensor = self.__prepare_input(image)
 
 		# Perform inference on the image
@@ -266,7 +269,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.__process_output(output, self.cfg)
 
-	def DrawDetectedOnFrame(self, image, type=OffsetType.UNKNOWN) :
+	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
 		for lane_num,lane_points in enumerate(self.lanes_points):
 
 			if ( lane_num==1 and type == OffsetType.RIGHT) :
@@ -279,7 +282,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 			for lane_point in lane_points:
 				cv2.circle(image, (lane_point[0],lane_point[1]), 3, color, -1)
 
-	def DrawAreaOnFrame(self, image, color=(255,191,0), adjust_lanes=True) :
+	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), adjust_lanes : bool = True) -> None :
 		self.draw_area = False
 		H, W, _ = image.shape
 		# Draw a mask for the current lane
@@ -299,7 +302,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 
 		if (not self.draw_area) : self.draw_area_points = []
 
-	def AutoDrawLanes(self, image, draw_points=True, draw_area=True):
+	def AutoDrawLanes(self, image : cv2, draw_points : bool = True, draw_area : bool = True) -> None:
 		self.DetectFrame(image)
 
 		if (draw_points) :
