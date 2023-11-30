@@ -1,14 +1,12 @@
 import os
 import cv2
-import sys
-import onnx
 import random
 import logging
 import numpy as np
-import onnxruntime as ort
 import tensorrt as trt
 import pycuda.driver as cuda
-
+import onnxruntime as ort
+from typing import *
 try :
 	from utils import ObjectModelType, hex_to_rgb
 except :
@@ -168,66 +166,49 @@ class YoloDetector(YoloLiteParameters):
 		classes_path = os.path.expanduser(self.classes_path)
 		if (self.logger) :
 			self.logger.debug("class path: %s." % classes_path)
-		if (os.path.isfile(classes_path) is False):
-			raise Exception("%s is not exist." % classes_path)
-		self._get_class(classes_path)
+		self.__get_class(classes_path)
 
 		model_path = os.path.expanduser(self.model_path)
 		if (self.logger) :
 			self.logger.debug("model path: %s." % model_path)
-		if (os.path.isfile(model_path) is False):
-			raise Exception("%s is not exist." % model_path)
+		assert os.path.isfile(model_path), Exception("%s is not exist." % model_path)
 		assert model_path.endswith(('.onnx', '.trt')), 'Onnx/TensorRT Parameters must be a .onnx/.trt file.'
 
 		if model_path.endswith('.trt') :
 			self.framework_type = "trt"
-			self._load_model_tensorrt(model_path) 
+			self.__load_model_tensorrt(model_path) 
 		else :
 			self.framework_type = "onnx"
-			self._load_model_onnxruntime(model_path)
+			self.__load_model_onnxruntime(model_path)
 
 		YoloLiteParameters.__init__(self, self.model_type, self.input_shapes, len(self.class_names))
 		if (self.logger) :
 			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
 		
-
-	def _get_class(self, classes_path):
+	def __get_class(self, classes_path : str) -> None:
+		assert os.path.isfile(classes_path), Exception("%s is not exist." % classes_path)
 		with open(classes_path) as f:
 			class_names = f.readlines()
 		self.class_names = [c.strip() for c in class_names]
 		get_colors = list(map(lambda i:"#" +"%06x" % random.randint(0, 0xFFFFFF),range(len(self.class_names)) ))
 		self.colors_dict = dict(zip(list(self.class_names), get_colors))
 
-	def _get_onnx_model_shape(self, model_path):
-		model = onnx.load(model_path)
-		try:
-			onnx.checker.check_model(model)
-		except onnx.checker.ValidationError as e:
-			if (self.logger) :
-				self.logger.error('The model is invalid: %s' % e)
-			sys.exit(0)
-		else:
-			self.input_shapes = tuple(np.array([[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]).flatten())[-2:]
-
-	def _load_model_onnxruntime(self, model_path) :
-		self._get_onnx_model_shape(model_path)
+	def __load_model_onnxruntime(self, model_path : str) -> None :
 		if  ort.get_device() == 'GPU' and 'CUDAExecutionProvider' in  ort.get_available_providers():  # gpu 
 			self.providers = 'CUDAExecutionProvider'
 		else :
 			self.providers = 'CPUExecutionProvider'
 		self.session = ort.InferenceSession(model_path, providers= [self.providers] )
-		if 'float16' in self.session.get_inputs()[0].type :
-			self.input_types = np.float16
-		else :
-			self.input_types = np.float32
-		self.providers = 'CUDAExecutionProvider'
+		
+		self.input_types = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
+		self.input_shapes = self.session.get_inputs()[0].shape[-2:]
 
-	def _load_model_tensorrt(self, model_path) :
+	def __load_model_tensorrt(self, model_path : str) -> None :
+		self.providers = 'CUDAExecutionProvider'
 		self.session = TensorRTParameters(model_path, len(self.class_names), self.model_type)
-		self.input_types = self.session.dtype 
 
+		self.input_types = self.session.dtype 
 		self.input_shapes = self.session.input_shapes
-		self.providers = 'CUDAExecutionProvider'
 
 	@property
 	def object_info(self) :
@@ -237,29 +218,10 @@ class YoloDetector(YoloLiteParameters):
 		
 		return self._object_info
 	
-	def resize_image_format(self, srcimg, frame_resize):
-		padh, padw, newh, neww = 0, 0, frame_resize[0], frame_resize[1]
-		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
-			hw_scale = srcimg.shape[0] / srcimg.shape[1]
-			if hw_scale > 1:
-				newh, neww = frame_resize[0], int(frame_resize[1] / hw_scale)
-				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
-				padw = int((frame_resize[1] - neww) * 0.5)
-				img = cv2.copyMakeBorder(img, 0, 0, padw, frame_resize[1] - neww - padw, cv2.BORDER_CONSTANT,
-										 value=0)  # add border
-			else:
-				newh, neww = int(frame_resize[0] * hw_scale) + 1, frame_resize[1]
-				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
-				padh = int((frame_resize[0] - newh) * 0.5)
-				img = cv2.copyMakeBorder(img, padh, frame_resize[0] - newh - padh, 0, 0, cv2.BORDER_CONSTANT, value=0)
-		else:
-			img = cv2.resize(srcimg, (frame_resize[1], frame_resize[0]), interpolation=cv2.INTER_CUBIC)
-		ratioh, ratiow = srcimg.shape[0] / newh, srcimg.shape[1] / neww
-		return img, newh, neww, ratioh, ratiow, padh, padw
-
-	def adjust_boxes_ratio(self, bounding_box, ratio, stretch_type) :
+	@staticmethod
+	def adjust_boxes_ratio(box : list, ratio : Union[float, None], stretch_type : Union[str, None]) -> tuple:
 		""" Adjust the aspect ratio of the box according to the orientation """
-		xmin, ymin, width, height = bounding_box 
+		xmin, ymin, width, height = box 
 		width = int(width)
 		height = int(height)
 		xmax = xmin + width
@@ -297,47 +259,27 @@ class YoloDetector(YoloLiteParameters):
 			xmax = xmin + changewidth
 		return (xmin, ymin, xmax, ymax)
 
-	def get_kpss_coordinate(self, kpss, ratiow, ratioh, padh, padw ) :
+	@staticmethod
+	def convert_kpss_coordinate(kpss : list, ratiow : float, ratioh : float, padh : int, padw : int) -> list:
 		if (kpss != []) :
 			kpss = np.vstack(kpss)
 			kpss[:, :, 0] = (kpss[:, :, 0] - padw) * ratiow
 			kpss[:, :, 1] = (kpss[:, :, 1] - padh) * ratioh
 		return kpss
 
-	def get_boxes_coordinate(self, bounding_boxes, ratiow, ratioh, padh, padw ) :
-		if (bounding_boxes != []) :
-			bounding_boxes = np.vstack(bounding_boxes)
-			bounding_boxes[:, 2:4] = bounding_boxes[:, 2:4] - bounding_boxes[:, 0:2]
-			bounding_boxes[:, 0] = (bounding_boxes[:, 0] - padw) * ratiow
-			bounding_boxes[:, 1] = (bounding_boxes[:, 1] - padh) * ratioh
-			bounding_boxes[:, 2] = bounding_boxes[:, 2] * ratiow
-			bounding_boxes[:, 3] = bounding_boxes[:, 3] * ratioh
-		return bounding_boxes
+	@staticmethod
+	def convert_boxes_coordinate(boxes : list, ratiow : float, ratioh : float, padh : int, padw : int) -> list:
+		if (boxes != []) :
+			boxes = np.vstack(boxes)
+			boxes[:, 2:4] = boxes[:, 2:4] - boxes[:, 0:2]
+			boxes[:, 0] = (boxes[:, 0] - padw) * ratiow
+			boxes[:, 1] = (boxes[:, 1] - padh) * ratioh
+			boxes[:, 2] = boxes[:, 2] * ratiow
+			boxes[:, 3] = boxes[:, 3] * ratioh
+		return boxes
 
-	def get_nms_results(self, bounding_boxes, confidences, class_ids, kpss, score, iou, priority=False):
-		results = []
-		nms_results = cv2.dnn.NMSBoxes(bounding_boxes, confidences, score, iou) 
-		if len(nms_results) > 0:
-			for i in nms_results:
-				kpsslist = []
-				try :
-					predicted_class = self.class_names[class_ids[i]]
-				except :
-					predicted_class = "unknown"
-				if (kpss != []) :
-					for j in range(5):
-						kpsslist.append( ( int(kpss[i, j, 0]) , int(kpss[i, j, 1]) ) )
-				
-				bounding_box = bounding_boxes[i]
-				bounding_box = self.adjust_boxes_ratio(bounding_box, None, None)
-
-				xmin, ymin, xmax, ymax = list(map(int, bounding_box))
-				results.append(([ymin, xmin, ymax, xmax, predicted_class], kpsslist))
-		if (priority and len(results) > 0) :
-			results = [results[0]]
-		return results
-
-	def cornerRect(self, img, bbox, t=5, rt=1, colorR=(255, 0, 255), colorC=(0, 255, 0)):
+	@staticmethod
+	def cornerRect(img, bbox : list, t : int = 5, rt : int = 1, colorR : tuple = (255, 0, 255), colorC : tuple = (0, 255, 0)):
 		ymin, xmin, ymax, xmax, label = bbox
 		l = max(1, int(min( (ymax-ymin), (xmax-xmin))*0.2))
 
@@ -358,14 +300,54 @@ class YoloDetector(YoloLiteParameters):
 
 		return img
 
-	def DetectFrame(self, srcimg) :
-		kpss = []
-		class_ids = []
-		confidences = []
-		bounding_boxes = []
-		score = float(self.box_score)
-		iou = float(self.box_nms_iou)
+	def resize_image_format(self, srcimg : cv2 , frame_resize : tuple) -> Tuple[np.ndarray, int, int, float, float, int, int]:
+		padh, padw, newh, neww = 0, 0, frame_resize[0], frame_resize[1]
+		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
+			hw_scale = srcimg.shape[0] / srcimg.shape[1]
+			if hw_scale > 1:
+				newh, neww = frame_resize[0], int(frame_resize[1] / hw_scale)
+				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
+				padw = int((frame_resize[1] - neww) * 0.5)
+				img = cv2.copyMakeBorder(img, 0, 0, padw, frame_resize[1] - neww - padw, cv2.BORDER_CONSTANT,
+										 value=0)  # add border
+			else:
+				newh, neww = int(frame_resize[0] * hw_scale) + 1, frame_resize[1]
+				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
+				padh = int((frame_resize[0] - newh) * 0.5)
+				img = cv2.copyMakeBorder(img, padh, frame_resize[0] - newh - padh, 0, 0, cv2.BORDER_CONSTANT, value=0)
+		else:
+			img = cv2.resize(srcimg, (frame_resize[1], frame_resize[0]), interpolation=cv2.INTER_CUBIC)
+		ratioh, ratiow = srcimg.shape[0] / newh, srcimg.shape[1] / neww
+		return img, newh, neww, ratioh, ratiow, padh, padw
+	
+	def get_nms_results(self, boxes : list, class_confs : list, class_ids : list, kpss : list, priority : bool = False) -> List[Tuple[list, list]]:
+		results = []
+		nms_results = cv2.dnn.NMSBoxes(boxes, class_confs, self.box_score, self.box_nms_iou) 
+		if len(nms_results) > 0:
+			for i in nms_results:
+				kpsslist = []
+				try :
+					predicted_class = self.class_names[class_ids[i]]
+				except :
+					predicted_class = "unknown"
+				if (kpss != []) :
+					for j in range(5):
+						kpsslist.append( ( int(kpss[i, j, 0]) , int(kpss[i, j, 1]) ) )
+				
+				bbox = boxes[i]
+				bbox = self.adjust_boxes_ratio(bbox, None, None)
 
+				xmin, ymin, xmax, ymax = list(map(int, bbox))
+				results.append(([ymin, xmin, ymax, xmax, predicted_class], kpsslist))
+		if (priority and len(results) > 0) :
+			results = [results[0]]
+		return results
+
+	def DetectFrame(self, srcimg : cv2) -> None:
+		_raw_kpss = []
+		_raw_class_ids = []
+		_raw_class_confs = []
+		_raw_boxes = []
 
 		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes)
 		blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False).astype(self.input_types)
@@ -387,23 +369,24 @@ class YoloDetector(YoloLiteParameters):
 			else :
 				scores = detection[5:]
 			classId = np.argmax(scores)
-			confidence = scores[classId]
-			if confidence > score :
+			confidence = float(scores[classId])
+			if confidence > self.box_score :
 				if (self.model_type != ObjectModelType.YOLOV8) :
 					if (detection[4] > 0.4 ) :
 						pass
 					else :
 						continue
+
 				x, y, w, h = detection[0].item(), detection[1].item(), detection[2].item(), detection[3].item() 
-				class_ids.append(classId)
-				confidences.append(float(confidence))
-				bounding_boxes.append(np.stack([(x - 0.5 * w), (y - 0.5 * h), (x + 0.5 * w), (y + 0.5 * h)], axis=-1))
+				_raw_class_ids.append(classId)
+				_raw_class_confs.append(confidence)
+				_raw_boxes.append(np.stack([(x - 0.5 * w), (y - 0.5 * h), (x + 0.5 * w), (y + 0.5 * h)], axis=-1))
 
-		bounding_boxes = self.get_boxes_coordinate( bounding_boxes, ratiow, ratioh, padh, padw)
-		kpss = self.get_kpss_coordinate(kpss, ratiow, ratioh, padh, padw)
-		self._object_info = self.get_nms_results(bounding_boxes, confidences, class_ids, kpss, score, iou)
+		transform_boxes = self.convert_boxes_coordinate(_raw_boxes, ratiow, ratioh, padh, padw)
+		transform_kpss = self.convert_kpss_coordinate(_raw_kpss, ratiow, ratioh, padh, padw)
+		self._object_info = self.get_nms_results(transform_boxes, _raw_class_confs, _raw_class_ids, transform_kpss)
 
-	def DrawDetectedOnFrame(self, frame_show) :
+	def DrawDetectedOnFrame(self, frame_show : cv2) -> None:
 		tl = 3 or round(0.002 * (frame_show.shape[0] + frame_show.shape[1]) / 2) + 1    # line/font thickness
 		if ( len(self._object_info) != 0 )  :
 			for box, kpss in self._object_info:
