@@ -1,7 +1,7 @@
 import onnxruntime
 import scipy.special
 import cv2
-import time, os
+import time, os, math
 import numpy as np
 from typing import Tuple
 try :
@@ -31,12 +31,13 @@ class ModelConfig():
 		self.img_h = 590
 		self.griding_num = 200
 		self.cls_num_per_lane = 18
-		self.row_anchor = np.linspace(121, 131, self.cls_num_per_lane)
+		self.row_anchor = [round(value) for value in np.linspace(121, 287, self.cls_num_per_lane)]
 
 class TensorRTEngine(TensorRTBase):
 
 	def __init__(self, engine_file_path, cfg):
 		super(TensorRTEngine, self).__init__(engine_file_path, cfg)
+		self.cuda_dtype = self.dtype
 
 	def get_tensorrt_input_shape(self):
 		return self.engine.get_binding_shape(0)
@@ -148,14 +149,12 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		img_input = img_input.transpose(2, 0, 1)
 		img_input = img_input[np.newaxis,:,:,:]        
 
-		return img_input.astype(np.float32)
+		return img_input.astype(self.input_types)
 
-	@staticmethod
-	def __process_output(output, cfg : ModelConfig) -> np.ndarray:		
+	def __process_output(self, output, cfg : ModelConfig) -> np.ndarray:		
 		# Parse the output of the model
 
 		processed_output = np.squeeze(output[0])
-		# print(processed_output.shape)
 		# print(np.min(processed_output), np.max(processed_output))
 		# print(processed_output.reshape((1,-1)))
 		processed_output = processed_output[:, ::-1, :]
@@ -168,7 +167,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		processed_output = loc
 
 
-		col_sample = np.linspace(0, 800 - 1, cfg.griding_num)
+		col_sample = np.linspace(0, self.input_width - 1, cfg.griding_num)
 		col_sample_w = col_sample[1] - col_sample[0]
 
 		lanes_points = []
@@ -184,8 +183,9 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 				# Process each of the points for each lane
 				for point_num in range(processed_output.shape[0]):
 					if processed_output[point_num, lane_num] > 0:
-						lane_point = [int(processed_output[point_num, lane_num] * col_sample_w * cfg.img_w / 800) - 1, int(cfg.img_h * (cfg.row_anchor[cfg.cls_num_per_lane-1-point_num]/288)) - 1 ]
-						lane_points.append(lane_point)
+						lane_point = [processed_output[point_num, lane_num] * col_sample_w * cfg.img_w / self.input_width - 1, 
+					                  cfg.img_h * (cfg.row_anchor[cfg.cls_num_per_lane-1-point_num] / self.input_height) - 1 ]
+						lane_points.append([int(lane_point[0]*self.w_ratio), int(lane_point[1]*self.h_ratio) ])
 			else:
 				lanes_detected.append(False)
 
@@ -203,10 +203,8 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		else :
 			return left_lanes_points, right_lanes_points
 
-		if len(lefty) > 10:
-			left_fit = np.polyfit(lefty, leftx, 2)
-		if len(righty) > 10:
-			right_fit = np.polyfit(righty, rightx, 2)
+		left_fit = np.polyfit(lefty, leftx, 2)
+		right_fit = np.polyfit(righty, rightx, 2)
 
 		# Generate x and y values for plotting
 		maxy = image_height - 1
@@ -241,14 +239,13 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 	def getModel_input_details(self) -> None :
 		if (self.framework_type == "trt") :
 			self.input_shape = self.get_tensorrt_input_shape()
+			self.input_types = self.cuda_dtype
 		else :
 			self.input_shape = self.get_onnx_input_shape()
+			self.input_types = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
 		self.channes, self.input_height, self.input_width = self.input_shape[1:]
 		if (self.logger) : 
-			if (self.cfg.img_h == self.input_height and self.cfg.img_w == self.input_width) :
-				self.logger.info(f"UfldDetector Input Shape : {self.input_shape} ")
-			else :
-				self.logger.war(f"UfldDetector Model Iuput Shape {self.input_height, self.input_width} not equal cfg Input Shape {self.cfg.img_h, self.cfg.img_w}")
+			self.logger.info(f"UfldDetector Input Shape : {self.input_shape} || dtype : {self.input_types}")
 
 	def getModel_output_details(self) -> None :
 		if (self.framework_type == "trt") :
@@ -261,6 +258,7 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		self.num_lanes = self.output_shape[3]
 
 	def DetectFrame(self, image : cv2) -> None:
+		self.h_ratio, self.w_ratio = image.shape[0]/self.cfg.img_h, image.shape[1]/self.cfg.img_w
 		input_tensor = self.__prepare_input(image)
 
 		# Perform inference on the image

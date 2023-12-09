@@ -44,6 +44,7 @@ class TensorRTBase():
 			engine = runtime.deserialize_cuda_engine(f.read())
 
 		self.context =  self._create_context(engine)
+		self.dtype = trt.nptype(engine.get_binding_dtype(0)) 
 		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self._allocate_buffers(engine)
 
 		# Store

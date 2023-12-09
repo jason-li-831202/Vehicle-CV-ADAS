@@ -16,12 +16,12 @@ LOGGER = Logger(None, logging.INFO, logging.INFO )
 
 video_path = "./TrafficLaneDetector/temp/demo-1.mp4"
 lane_config = {
-	"model_path": "./TrafficLaneDetector/models/culane_res34.trt",
+	"model_path": "./TrafficLaneDetector/models/culane_res18_fp16.trt",
 	"model_type" : LaneModelType.UFLDV2_CULANE
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov8l-coco.trt',
+	"model_path": './ObjectDetector/models/yolov8m-coco_fp16.trt',
 	"model_type" : ObjectModelType.YOLOV8,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
@@ -232,6 +232,7 @@ if __name__ == "__main__":
 	#==========================================================
 	LOGGER.info("[Pycuda] Cuda Version: {}".format(drv.get_version()))
 	LOGGER.info("[Driver] Cuda Version: {}".format(drv.get_driver_version()))
+	LOGGER.info("-"*40)
 
 	# lane detection model
 	LOGGER.info("UfldDetector Model Type : {}".format(lane_config["model_type"].name))

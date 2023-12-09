@@ -9,8 +9,10 @@ except :
 	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
 
 def _softmax(x) :
+	# Note : 防止 overflow and underflow problem
+	x = x - np.max(x, axis=-1, keepdims=True) 
 	exp_x = np.exp(x)
-	return exp_x/np.sum(exp_x)
+	return exp_x/np.sum(exp_x, axis=-1,keepdims=True)
 
 class ModelConfig():
 
@@ -52,6 +54,7 @@ class TensorRTEngine(TensorRTBase):
 
 	def __init__(self, engine_file_path, cfg):
 		super(TensorRTEngine, self).__init__(engine_file_path, cfg)
+		self.cuda_dtype = self.dtype
 
 	def get_tensorrt_input_shape(self):
 		return self.engine.get_binding_shape(0)
@@ -95,6 +98,8 @@ class OnnxEngine():
 	def onnx_inference(self, input_tensor):
 		input_name = self.session.get_inputs()[0].name
 		output_names = [output.name for output in self.session.get_outputs()]
+		# TODO : error
+
 		output = self.session.run(output_names, {input_name: input_tensor})
 
 		return output
@@ -172,11 +177,12 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 		img_input = img_input.transpose(2, 0, 1)
 		img_input = img_input[np.newaxis,:,:,:]        
 
-		return img_input.astype(np.float32)
+		return img_input.astype(self.input_types)
 
 	@staticmethod
 	def __process_output(output, cfg : ModelConfig, local_width :int = 1, original_image_width : int = 1640, original_image_height : int = 590) -> np.ndarray:
 
+		# output = np.array(output, dtype=np.float32) 
 		output = {"loc_row" : output[0], 'loc_col' : output[1], "exist_row" : output[2], "exist_col" : output[3]}
 		# print(output["loc_row"].shape)
 		# print(output["exist_row"].shape)
@@ -292,12 +298,15 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 	def getModel_input_details(self) -> None :
 		if (self.framework_type == "trt") :
 			self.input_shape = self.get_tensorrt_input_shape()
+			self.input_types = self.cuda_dtype
 		else :
 			self.input_shape = self.get_onnx_input_shape()
+			self.input_types = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
+
 		self.channes, self.input_height, self.input_width = self.input_shape[1:]
 		if (self.logger) : 
 			if (self.cfg.img_h == self.input_height and self.cfg.img_w == self.input_width) :
-				self.logger.info(f"UfldDetector Input Shape : {self.input_shape} ")
+				self.logger.info(f"UfldDetector Input Shape : {self.input_shape} || dtype : {self.input_types}")
 			else :
 				self.logger.war(f"UfldDetector Model Iuput Shape {self.input_height, self.input_width} not equal cfg Input Shape {self.cfg.img_h, self.cfg.img_w}")
 

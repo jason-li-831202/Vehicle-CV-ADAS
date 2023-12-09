@@ -48,7 +48,14 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
     python convertOnnxToTensorRT.py -i <path-of-your-onnx-model>  -o <path-of-your-trt-model>
     ```
 
- * ***Video inference*** :
+ * ***Quantize ONNX models*** :
+
+    Converting a model to use float16 instead of float32 can decrease the model size.
+    ```
+    python onnxQuantization.py -i <path-of-your-onnx-model>
+    ```
+
+ * ***Video Inference*** :
 
    * Setting Config :
      > Note : can support onnx/tensorRT format model. But it needs to match the same model type.

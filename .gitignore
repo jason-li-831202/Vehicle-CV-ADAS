@@ -40,3 +40,17 @@ TrafficLaneDetector/temp/demo-2.mp4
 TrafficLaneDetector/temp/demo-3.mp4
 TrafficLaneDetector/temp/demo-4.mp4
 TrafficLaneDetector/temp/demo-5.mp4
+ObjectDetector/models/yolov5g-Lite-640_fp16.onnx
+ObjectDetector/models/yolov5l-coco_fp16.onnx
+ObjectDetector/models/yolov5l-coco_fp16.trt
+ObjectDetector/models/yolov5s-Lite-416_fp32.onnx
+ObjectDetector/models/yolov5s-Lite-416_fp32.trt
+ObjectDetector/models/yolov8l-coco_fp16.onnx
+ObjectDetector/models/yolov8l-coco_fp16.trt
+ObjectDetector/models/yolov8m-coco_fp16.onnx
+ObjectDetector/models/yolov8m-coco_fp16.trt
+TrafficLaneDetector/models/culane_res18_fp16.onnx
+TrafficLaneDetector/models/culane_res18_fp16.trt
+TrafficLaneDetector/models/culane_res34_fp32.onnx
+TrafficLaneDetector/models/culane_res34_fp32.trt
+TrafficLaneDetector/models/tusimple_18_fp16.onnx

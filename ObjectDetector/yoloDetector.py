@@ -24,7 +24,7 @@ class YoloLiteParameters():
 		self.grid = [np.zeros(1)] * self.nl
 		self.stride = np.array([8., 16., 32.])
 		self.anchor_grid = np.asarray(anchors, dtype=np.float32).reshape(self.nl, -1, 2)
-		self.input_shape = input_shape
+		self.input_shape = input_shape[-2:]
 
 	def __make_grid(self, nx=20, ny=20):
 		xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
@@ -66,7 +66,7 @@ class TensorRTParameters():
 
 		self.context =  self.__create_context(engine)
 		self.host_inputs, self.cuda_inputs, self.host_outputs, self.cuda_outputs, self.bindings = self.__allocate_buffers(engine)
-		self.input_shapes = engine.get_binding_shape(0)[-2:]
+		self.input_shapes = engine.get_binding_shape(0)
 		self.dtype = trt.nptype(engine.get_binding_dtype(0))
 
 		# Store
@@ -184,7 +184,8 @@ class YoloDetector(YoloLiteParameters):
 		YoloLiteParameters.__init__(self, self.model_type, self.input_shapes, len(self.class_names))
 		if (self.logger) :
 			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
-		
+			self.logger.info(f"YoloDetector Input Shape : {self.input_shapes} || dtype : {self.input_types}")
+
 	def __get_class(self, classes_path : str) -> None:
 		assert os.path.isfile(classes_path), Exception("%s is not exist." % classes_path)
 		with open(classes_path) as f:
@@ -201,7 +202,7 @@ class YoloDetector(YoloLiteParameters):
 		self.session = ort.InferenceSession(model_path, providers= [self.providers] )
 		
 		self.input_types = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
-		self.input_shapes = self.session.get_inputs()[0].shape[-2:]
+		self.input_shapes = self.session.get_inputs()[0].shape
 
 	def __load_model_tensorrt(self, model_path : str) -> None :
 		self.providers = 'CUDAExecutionProvider'
@@ -349,7 +350,7 @@ class YoloDetector(YoloLiteParameters):
 		_raw_class_confs = []
 		_raw_boxes = []
 
-		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes)
+		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes[-2:])
 		blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False).astype(self.input_types)
 		
 		if self.framework_type == "trt" :
