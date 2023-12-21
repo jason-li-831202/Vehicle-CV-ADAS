@@ -172,7 +172,7 @@ class TaskConditions(object):
 		else :
 			return False
 
-	def UpdateOffsetStatus(self, vehicle_offset, offset_thres=0.9) :
+	def UpdateOffsetStatus(self, vehicle_offset, offset_thres=0.65) :
 		"""
 		Judging the state of the avg offset.
 
@@ -273,7 +273,7 @@ class TaskConditions(object):
 		if (vehicle_distance != None) :
 			x, y, d = vehicle_distance
 			self.vehicle_collision_record.append(d)
-			if len(self.vehicle_collision_record) > 3:
+			if len(self.vehicle_collision_record) > 5:
 				self.vehicle_collision_record.pop(0)
 				avg_vehicle_collision = np.median(self.vehicle_collision_record)
 				if ( avg_vehicle_collision <= distance_thres) :

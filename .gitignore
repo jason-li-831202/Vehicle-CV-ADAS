@@ -55,3 +55,4 @@ TrafficLaneDetector/models/culane_res34_fp32.onnx
 TrafficLaneDetector/models/culane_res34_fp32.trt
 TrafficLaneDetector/models/tusimple_18_fp16.onnx
 ObjectDetector/models/yolov5m-coco_fp32.onnx
+TrafficLaneDetector/temp/demo-6.mp4

@@ -55,26 +55,28 @@ class PerspectiveTransformation(object):
             if (type=="Top"):
                 top_y = min(min(left_lanes[:, 1]), min(right_lanes[:, 1]))
                 top_left     = ( max(left_lanes[:, 0])-20, top_y )
-                bottom_left  = ( self.src[1][0], self.src[1][1] )
-                bottom_right = ( self.src[2][0], self.src[2][1] )
+                bottom_left  = ( self.src[1][0] -10, self.src[1][1] )
+                bottom_right = ( self.src[2][0] +10, self.src[2][1] )
                 top_right    = ( min(right_lanes[:, 0])+20, top_y )
             elif (type=="Bottom") :
                 top_left     = ( self.src[0][0], self.src[0][1] )
-                bottom_left  = ( min(left_lanes[:, 0]), self.src[1][1] )
-                bottom_right = ( max(right_lanes[:, 0]), self.src[2][1] )
+                bottom_left  = ( min(left_lanes[:, 0]) -20, self.src[1][1] )
+                bottom_right = ( max(right_lanes[:, 0]) +20, self.src[2][1] )
                 top_right    =  ( self.src[3][0], self.src[3][1] )
             elif (type=="Default") :
                 top_y = min(min(left_lanes[:, 1]), min(right_lanes[:, 1]))
                 top_left     = ( max(left_lanes[:, 0])-20, top_y )
-                bottom_left  = ( min(left_lanes[:, 0]), self.src[1][1] )
-                bottom_right = ( max(right_lanes[:, 0]), self.src[2][1] )
+                bottom_left  = ( min(left_lanes[:, 0]) -5, self.src[1][1] )
+                bottom_right = ( max(right_lanes[:, 0]) +5, self.src[2][1] )
                 top_right    = ( min(right_lanes[:, 0])+20, top_y)
             else :
                 return 
-            # print("top-left :", top_left )
-            # print("bottom-left :", bottom_left )
-            # print("bottom-right :", bottom_right )
-            # print("top-right :", top_right )
+            if self.logger != None :
+                self.logger.debug("Transform Type : " + type)
+                self.logger.debug("\ttop-left :" + str(top_left) )
+                self.logger.debug("\tbottom-left :" + str(bottom_left) )
+                self.logger.debug("\tbottom-right :" + str(bottom_right) )
+                self.logger.debug("\ttop-right :" + str(top_right) )
             self.src = np.float32([ top_left, bottom_left, bottom_right, top_right]) 
             self.M = cv2.getPerspectiveTransform(self.src, self.dst)
             self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)

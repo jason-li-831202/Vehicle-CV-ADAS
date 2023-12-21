@@ -36,7 +36,8 @@ class ModelConfig():
 class TensorRTEngine(TensorRTBase):
 
 	def __init__(self, engine_file_path, cfg):
-		super(TensorRTEngine, self).__init__(engine_file_path, cfg)
+		super(TensorRTEngine, self).__init__(engine_file_path)
+		self.cfg = cfg
 		self.cuda_dtype = self.dtype
 
 	def get_tensorrt_input_shape(self):
@@ -236,6 +237,13 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 				# cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
 		return fix_left_lanes_points, fix_right_lanes_points
 
+	@staticmethod
+	def ___check_lanes_area(lanes_detected : list) -> bool :
+		if(lanes_detected != []) :
+			if(lanes_detected[1] and lanes_detected[2]):
+				return True
+		return False
+	
 	def getModel_input_details(self) -> None :
 		if (self.framework_type == "trt") :
 			self.input_shape = self.get_tensorrt_input_shape()
@@ -267,6 +275,8 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 		# Process output data
 		self.lanes_points, self.lanes_detected = self.__process_output(output, self.cfg)
 
+		self.draw_area = self.___check_lanes_area(self.lanes_detected)
+
 	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
 		for lane_num,lane_points in enumerate(self.lanes_points):
 
@@ -281,24 +291,21 @@ class UltrafastLaneDetector(TensorRTEngine, OnnxEngine):
 				cv2.circle(image, (lane_point[0],lane_point[1]), 3, color, -1)
 
 	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), adjust_lanes : bool = True) -> None :
-		self.draw_area = False
 		H, W, _ = image.shape
+		self.draw_area_points = []
 		# Draw a mask for the current lane
-		if(self.lanes_detected != []) :
-			if(self.lanes_detected[1] and self.lanes_detected[2]):
-				self.draw_area = True
-				lane_segment_img = image.copy()
+		if(self.draw_area):
+			lane_segment_img = image.copy()
 
-				if (adjust_lanes) :
-					left_lanes_points, right_lanes_points = self.__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
-				else :
-					left_lanes_points, right_lanes_points = self.lanes_points[1], self.lanes_points[2]
-				self.draw_area_points = [np.vstack((left_lanes_points,np.flipud(right_lanes_points)))]
-				
-				cv2.fillPoly(lane_segment_img, pts = self.draw_area_points, color =color)
-				image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
+			if (adjust_lanes) :
+				left_lanes_points, right_lanes_points = self.__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
+			else :
+				left_lanes_points, right_lanes_points = self.lanes_points[1], self.lanes_points[2]
+			self.draw_area_points = [np.vstack((left_lanes_points,np.flipud(right_lanes_points)))]
+			
+			cv2.fillPoly(lane_segment_img, pts = self.draw_area_points, color =color)
+			image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
 
-		if (not self.draw_area) : self.draw_area_points = []
 
 	def AutoDrawLanes(self, image : cv2, draw_points : bool = True, draw_area : bool = True) -> None:
 		self.DetectFrame(image)

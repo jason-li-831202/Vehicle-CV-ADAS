@@ -242,7 +242,7 @@ if __name__ == "__main__":
 	else :
 		UltrafastLaneDetector.set_defaults(lane_config)
 		laneDetector = UltrafastLaneDetector(logger=LOGGER)
-	transformView = PerspectiveTransformation( (width, height) )
+	transformView = PerspectiveTransformation( (width, height) , logger=LOGGER)
 
 	# object detection model
 	LOGGER.info("YoloDetector Model Type : {}".format(object_config["model_type"].name))
@@ -274,7 +274,7 @@ if __name__ == "__main__":
 			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.draw_area)
 
 
-			if (not laneDetector.draw_area or analyzeMsg.CheckStatus()) :
+			if (analyzeMsg.CheckStatus() and laneDetector.draw_area ) :
 				transformView.updateTransformParams(laneDetector.lanes_points[1], laneDetector.lanes_points[2], analyzeMsg.transform_status)
 			birdview_show = transformView.transformToBirdView(frame_show)
 

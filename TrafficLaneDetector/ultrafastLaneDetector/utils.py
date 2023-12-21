@@ -27,8 +27,7 @@ class CurvatureType(Enum):
 lane_colors = [(255, 0, 0),(46,139,87),(50,205,50),(0,255,255)]
 
 class TensorRTBase():
-	def __init__(self, engine_file_path, cfg):
-		self.cfg = cfg
+	def __init__(self, engine_file_path):
 		self.providers = 'CUDAExecutionProvider'
 		self.framework_type = "trt"
 		# Create a Context on this device,
