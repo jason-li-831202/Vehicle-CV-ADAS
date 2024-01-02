@@ -161,7 +161,7 @@ class YoloDetector(YoloLiteParameters):
 		self.__dict__.update(self._defaults) # set up default values
 		self.__dict__.update(kwargs) # and update with user overrides
 		self.logger = logger
-		self.keep_ratio = False
+		self.keep_ratio = True
 		
 		classes_path = os.path.expanduser(self.classes_path)
 		if (self.logger) :
@@ -301,9 +301,10 @@ class YoloDetector(YoloLiteParameters):
 
 		return img
 
-	def resize_image_format(self, srcimg : cv2 , frame_resize : tuple) -> Tuple[np.ndarray, int, int, float, float, int, int]:
+	@staticmethod
+	def resize_image_format(srcimg : cv2 , frame_resize : tuple, keep_ratio=True) -> Tuple[np.ndarray, int, int, float, float, int, int]:
 		padh, padw, newh, neww = 0, 0, frame_resize[0], frame_resize[1]
-		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
+		if keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
 			hw_scale = srcimg.shape[0] / srcimg.shape[1]
 			if hw_scale > 1:
 				newh, neww = frame_resize[0], int(frame_resize[1] / hw_scale)
@@ -350,7 +351,7 @@ class YoloDetector(YoloLiteParameters):
 		_raw_class_confs = []
 		_raw_boxes = []
 
-		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes[-2:])
+		image, newh, neww, ratioh, ratiow, padh, padw = self.resize_image_format(srcimg, self.input_shapes[-2:], self.keep_ratio)
 		blob = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False).astype(self.input_types)
 		
 		if self.framework_type == "trt" :

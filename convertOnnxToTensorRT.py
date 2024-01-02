@@ -4,6 +4,12 @@ import argparse
 import inspect
 from pathlib import Path
 from typing import *
+# import pycuda.driver as drv
+# import pycuda.autoinit
+# import numpy as np
+# import cv2 as cv2
+
+# from ObjectDetector.yoloDetector import YoloDetector
 """
 takes in onnx model
 converts to tensorrt
@@ -17,6 +23,58 @@ parser.add_argument('--verbose', action='store_true', default=False, help='Tenso
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 
+# class Calibrator(trt.IInt8EntropyCalibrator):
+#     def __init__(self, quantification=1, batch_size=1, height=640, width=640, calibration_images="", cache_file=""):
+#         trt.IInt8EntropyCalibrator.__init__(self)
+#         self.index = 0
+#         self.length = quantification
+#         self.batch_size = batch_size
+#         self.cache_file = cache_file
+#         self.height = height
+#         self.width = width
+#         self.img_list = [ str(name) for name in Path(calibration_images).iterdir()]
+#         self.calibration_data = np.zeros((self.batch_size, 3, self.height, self.width), dtype=np.float32)
+#         self.d_input = drv.mem_alloc(self.calibration_data.nbytes)
+
+#     def next_batch(self):
+#         if self.index < self.length:
+#             for i in range(self.batch_size):
+#                 img = cv2.imread(self.img_list[i + self.index*self.batch_size])
+#                 img = self.preprocess(img)
+#                 self.calibration_data[i] = img
+#             self.index += 1
+#             return np.ascontiguousarray(self.calibration_data, dtype=np.float32)
+#         else:
+#             return np.array([])
+
+#     def __len__(self):
+#         return self.length
+
+#     def get_batch_size(self):
+#         return self.batch_size
+
+#     def get_batch(self, name):
+#         batch = self.next_batch()
+#         if not batch.size:
+#             return None
+#         drv.memcpy_htod(self.d_input, batch)
+#         return [int(self.d_input)]
+
+#     def read_calibration_cache(self):
+#         # If there is a cache, use it instead of calibrating again. Otherwise, implicitly return None.
+#         if Path(self.cache_file).exists():
+#             with open(self.cache_file, "rb") as f:
+#                 return f.read()
+
+#     def write_calibration_cache(self, cache):
+#         with open(self.cache_file, "wb") as f:
+#             f.write(cache)
+
+#     def preprocess(self, img):
+#         image, newh, neww, ratioh, ratiow, padh, padw = YoloDetector.resize_image_format(img, (self.height, self.width), True)
+#         image = cv2.dnn.blobFromImage(image, 1/255.0, (image.shape[1], image.shape[0]), swapRB=True, crop=False).astype(np.float32)
+#         return image
+    
 def colorstr(*input):
     # Colors a string https://en.wikipedia.org/wiki/ANSI_escape_code, i.e.  colorstr('blue', 'hello world')
     *args, string = input if len(input) > 1 else ('blue', 'bold', input[0])  # color arguments, string
@@ -106,18 +164,17 @@ if __name__ == '__main__':
 		for out in outputs:
 			print(colorstr('bright_magenta', f'   Output "{out.name}" with shape {out.shape} and dtype {out.dtype}'))
 
-		profile = builder.create_optimization_profile()
-		# FIXME: Hardcoded for ImageNet. The minimum/optimum/maximum dimensions of a dynamic input tensor are the same.
-		# profile.set_shape(input_tensor_name, (1, 3, 224, 224), (max_batch_size, 3, 224, 224), (max_batch_size, 3, 224, 224))
 		config = builder.create_builder_config()
 		if trt.__version__[0] <= '7':
 			builder.max_workspace_size = 1 << 30 # 1GB
 		else :
 			config.max_workspace_size = 1 << 30
-		config.add_optimization_profile(profile)
+               
 		print(f' Note: building FP{16 if (builder.platform_has_fast_fp16 and inp.dtype==trt.DataType.HALF) else 32} engine as {f}')
 		if builder.platform_has_fast_fp16 and inp.dtype==trt.DataType.HALF:
 			config.set_flag(trt.BuilderFlag.FP16)
+		# config.set_flag(trt.BuilderFlag.INT8)
+		# config.int8_calibrator = Calibrator(1, 1, inp.shape[2], inp.shape[3], "./demo/val2017")
 		print(colorstr('magenta', "*"*40))
 
 		print(colorstr('👉 Building the TensorRT engine. This would take a while...'))
