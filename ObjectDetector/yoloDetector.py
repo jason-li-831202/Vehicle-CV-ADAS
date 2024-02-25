@@ -127,7 +127,7 @@ class TensorRTParameters():
 
 		# Here we use the first row of output in that batch_size = 1
 		trt_outputs = host_outputs[0]
-		if (self.model_type == ObjectModelType.YOLOV8) :
+		if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
 			return np.reshape(trt_outputs, (self.num_classes+4, -1 ))
 		else :
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
@@ -359,21 +359,21 @@ class YoloDetector(YoloLiteParameters):
 		else :
 			output_from_network = self.session.run([self.session.get_outputs()[0].name], {self.session.get_inputs()[0].name:  blob})[0].squeeze(axis=0)
 		
-		if (self.model_type == ObjectModelType.YOLOV8) :
+		if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
 			output_from_network = output_from_network.T
 		
 		output_from_network = self.lite_postprocess(output_from_network)
 
 		# inference output
 		for detection in output_from_network:
-			if (self.model_type == ObjectModelType.YOLOV8) :
+			if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
 				scores = detection[4:]
 			else :
 				scores = detection[5:]
 			classId = np.argmax(scores)
 			confidence = float(scores[classId])
 			if confidence > self.box_score :
-				if (self.model_type != ObjectModelType.YOLOV8) :
+				if (self.model_type not in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
 					if (detection[4] > 0.4 ) :
 						pass
 					else :

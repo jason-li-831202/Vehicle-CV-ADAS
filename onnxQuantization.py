@@ -18,9 +18,25 @@ if __name__ == "__main__":
 
     # Load your model
     onnx_model = onnx.load(input_onnx_model)
+    # Simplify (Note : yolov9 need used it)
+    try:
+        import onnxsim
+        print("Starting to simplify onnx with %s..." % onnxsim.__version__)
+
+        onnx_model, check = onnxsim.simplify(onnx_model)
+        assert check, "assert check failed"
+    except ImportError:
+        print(
+            "onnxsim is not found, if you want to simplify the onnx, "
+            + "you should install it:\n\t"
+            + "pip install -U onnxsim onnxruntime\n"
+        )
+    except Exception as e:
+        print(f'Simplify onnx export failure ❌ : {e}')
 
     # Convert tensor float type from your input ONNX model to tensor float16
     onnx_model = float16.convert_float_to_float16(onnx_model)
     # Save as protobuf
     onnx.save(onnx_model, str(Path.joinpath(basePath, baseName+"_fp16"+baseaSuffix)) )
+
     # quantized_model = quantize_dynamic(input_onnx_model, str(Path.joinpath(basePath, baseName+"_fp16"+baseaSuffix)), weight_type=QuantType.QUInt8)

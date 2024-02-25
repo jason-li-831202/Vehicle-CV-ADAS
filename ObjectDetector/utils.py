@@ -12,6 +12,7 @@ class ObjectModelType(Enum):
 	YOLOV5 = 0
 	YOLOV5_LITE = 1
 	YOLOV8 = 2
+	YOLOV9 = 3
 
 def hex_to_rgb(value):
     value = value.lstrip('#')
