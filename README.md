@@ -46,7 +46,9 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
 
     Use the Google Colab notebook to convert the yolov6 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1pke1ffMeI2dXkIAbzp6IHWdQ0u8S6I0n?usp=sharing)
 
-    Use the Google Colab notebook to convert the yolov8 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-yZg6hFg27uCPSycRCRtyezHhq_VAHxQ?usp=sharing)
+    Use the Google Colab notebook to convert the yolov8 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)
+
+    Use the Google Colab notebook to convert the yolov9 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12oFXgco3CARzhU8CiLCpf_6oBA3sAvPT?usp=sharing)
 
  * ***Convert Onnx to TenserRT model*** :
 
