@@ -11,7 +11,7 @@
 
 Example scripts for the detection of lanes using the [ultra fast lane detection v2](https://github.com/cfzd/Ultra-Fast-Lane-Detection-v2) model in ONNX/TensorRT.
 
-Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9) model in ONNX/TensorRT.
+Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9) model in ONNX/TensorRT.
 
 # ➤ Contents
 1) [Requirements](#Requirements)
@@ -39,6 +39,14 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
     
 
 <h1 id="Examples">➤ Examples</h1>
+
+ * ***Download YOLO Series Onnx model*** :
+
+    Use the Google Colab notebook to convert the yolov5 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1V-F3erKkPun-vNn28BoOc6ENKmfo8kDh?usp=sharing)
+
+    Use the Google Colab notebook to convert the yolov6 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1pke1ffMeI2dXkIAbzp6IHWdQ0u8S6I0n?usp=sharing)
+
+    Use the Google Colab notebook to convert the yolov8 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-yZg6hFg27uCPSycRCRtyezHhq_VAHxQ?usp=sharing)
 
  * ***Convert Onnx to TenserRT model*** :
 
@@ -82,6 +90,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
    | Lanes           | `LaneModelType.UFLDV2_CULANE`    | Support CULane data with ResNet18/34 backbone.    | 
    | Object          | `ObjectModelType.YOLOV5`         | Support yolov5n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV5_LITE`    | Support yolov5lite-e/s/c/g model.                 | 
+   | Object          | `ObjectModelType.YOLOV6`         | Support yolov6s/t/n model.                        | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
    

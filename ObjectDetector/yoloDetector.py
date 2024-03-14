@@ -417,7 +417,7 @@ if __name__ == "__main__":
 
 	capture = cv2.VideoCapture(r"./temp/test.avi")
 	config = {
-		"model_path": 'models/yolov5m-coco.trt',
+		"model_path": 'models/yolov6m-coco_fp32.onnx',
 		"model_type" : ObjectModelType.YOLOV5,
 		"classes_path" : 'models/coco_label.txt',
 		"box_score" : 0.4,
