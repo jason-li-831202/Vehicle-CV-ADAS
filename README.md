@@ -44,7 +44,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
 
     Use the Google Colab notebook to convert the yolov5 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1V-F3erKkPun-vNn28BoOc6ENKmfo8kDh?usp=sharing)
 
-    Use the Google Colab notebook to convert the yolov6 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1pke1ffMeI2dXkIAbzp6IHWdQ0u8S6I0n?usp=sharing)
+    Use the Google Colab notebook to convert the yolov6 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1FhyQvDUzUVgPwYB1DSADfCm_CG09D9Ab?usp=sharing)
 
     Use the Google Colab notebook to convert the yolov8 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)
 
@@ -92,7 +92,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
    | Lanes           | `LaneModelType.UFLDV2_CULANE`    | Support CULane data with ResNet18/34 backbone.    | 
    | Object          | `ObjectModelType.YOLOV5`         | Support yolov5n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV5_LITE`    | Support yolov5lite-e/s/c/g model.                 | 
-   | Object          | `ObjectModelType.YOLOV6`         | Support yolov6s/t/n model.                        | 
+   | Object          | `ObjectModelType.YOLOV6`         | Support yolov6n/s/m/l model.                      | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
    
