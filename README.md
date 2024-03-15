@@ -11,7 +11,7 @@
 
 Example scripts for the detection of lanes using the [ultra fast lane detection v2](https://github.com/cfzd/Ultra-Fast-Lane-Detection-v2) model in ONNX/TensorRT.
 
-Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9) model in ONNX/TensorRT.
+Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv7](https://github.com/WongKinYiu/yolov7)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9) model in ONNX/TensorRT.
 
 # ➤ Contents
 1) [Requirements](#Requirements)
@@ -48,6 +48,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
     | :-------------  |:-------------------------------- | :------------------------------------------------ | 
     | YOLOv5          | `v6.2`                           | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mwoA3_-f3QIcHtLSuGN5WVszKeZ_i366?usp=sharing)     | 
     | YOLOv6/Lite     | `0.4.0`      | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1FhyQvDUzUVgPwYB1DSADfCm_CG09D9Ab?usp=sharing)       | 
+    | YOLOv7          | `v0.1`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1arGcVT32Sm3zxhql2jgAa5xIEZdsDq9D?usp=sharing)  |
     | YOLOv8          | `8.1.27`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)  |
     | YOLOv9          | `v0.1`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12oFXgco3CARzhU8CiLCpf_6oBA3sAvPT?usp=sharing) |
 
@@ -95,6 +96,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
    | Object          | `ObjectModelType.YOLOV5`         | Support yolov5n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV5_LITE`    | Support yolov5lite-e/s/c/g model.                 | 
    | Object          | `ObjectModelType.YOLOV6`         | Support yolov6n/s/m/l, yolov6lite-s/m/l model.    | 
+   | Object          | `ObjectModelType.YOLOV7`         | Support yolov7 tiny/x/w/e/d model.                | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
    
