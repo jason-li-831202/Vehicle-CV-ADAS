@@ -42,13 +42,15 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
 
  * ***Download YOLO Series Onnx model*** :
 
-    Use the Google Colab notebook to convert the yolov5 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1V-F3erKkPun-vNn28BoOc6ENKmfo8kDh?usp=sharing)
+    Use the Google Colab notebook to convert 
+    
+    | Model           | release version                  |  Link                                             | 
+    | :-------------  |:-------------------------------- | :------------------------------------------------ | 
+    | YOLOv5          | `v6.2`                           | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mwoA3_-f3QIcHtLSuGN5WVszKeZ_i366?usp=sharing)     | 
+    | YOLOv6/Lite     | `0.4.0`      | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1FhyQvDUzUVgPwYB1DSADfCm_CG09D9Ab?usp=sharing)       | 
+    | YOLOv8          | `8.1.27`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)  |
+    | YOLOv9          | `v0.1`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12oFXgco3CARzhU8CiLCpf_6oBA3sAvPT?usp=sharing) |
 
-    Use the Google Colab notebook to convert the yolov6 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1FhyQvDUzUVgPwYB1DSADfCm_CG09D9Ab?usp=sharing)
-
-    Use the Google Colab notebook to convert the yolov8 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)
-
-    Use the Google Colab notebook to convert the yolov9 model - [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12oFXgco3CARzhU8CiLCpf_6oBA3sAvPT?usp=sharing)
 
  * ***Convert Onnx to TenserRT model*** :
 
@@ -92,7 +94,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
    | Lanes           | `LaneModelType.UFLDV2_CULANE`    | Support CULane data with ResNet18/34 backbone.    | 
    | Object          | `ObjectModelType.YOLOV5`         | Support yolov5n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV5_LITE`    | Support yolov5lite-e/s/c/g model.                 | 
-   | Object          | `ObjectModelType.YOLOV6`         | Support yolov6n/s/m/l model.                      | 
+   | Object          | `ObjectModelType.YOLOV6`         | Support yolov6n/s/m/l, yolov6lite-s/m/l model.    | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
    
