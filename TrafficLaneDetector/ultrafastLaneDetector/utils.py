@@ -1,4 +1,5 @@
 from enum import Enum
+import abc
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
@@ -26,7 +27,7 @@ class CurvatureType(Enum):
 
 lane_colors = [(255, 0, 0),(46,139,87),(50,205,50),(0,255,255)]
 
-class TensorRTBase():
+class TensorRTBase(abc.ABC):
 	def __init__(self, engine_file_path):
 		self.providers = 'CUDAExecutionProvider'
 		self.framework_type = "trt"
@@ -104,3 +105,11 @@ class TensorRTBase():
 		self.cuda_driver_context.pop()
 	
 		return host_outputs
+
+	@abc.abstractmethod
+	def get_tensorrt_input_shape(self):
+		return NotImplemented
+	
+	@abc.abstractmethod
+	def get_tensorrt_output_shape(self):
+		return NotImplemented

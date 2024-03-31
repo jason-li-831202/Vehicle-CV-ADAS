@@ -8,9 +8,9 @@ import pycuda.driver as cuda
 import onnxruntime as ort
 from typing import *
 try :
-	from utils import ObjectModelType, hex_to_rgb
+	from utils import ObjectModelType, hex_to_rgb, fast_nms, fast_soft_nms
 except :
-	from ObjectDetector.utils import ObjectModelType, hex_to_rgb
+	from ObjectDetector.utils import ObjectModelType, hex_to_rgb, fast_nms, fast_soft_nms
 
 class YoloLiteParameters():
 	def __init__(self, model_type, input_shape, num_classes):
@@ -131,6 +131,8 @@ class TensorRTParameters():
 			return np.reshape(trt_outputs, (self.num_classes+4, -1 ))
 		else :
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
+
+
 
 
 class YoloDetector(YoloLiteParameters):
@@ -269,7 +271,7 @@ class YoloDetector(YoloLiteParameters):
 		return kpss
 
 	@staticmethod
-	def convert_boxes_coordinate(boxes : list, ratiow : float, ratioh : float, padh : int, padw : int) -> list:
+	def convert_boxes_coordinate(boxes : list, ratiow : float, ratioh : float, padh : int, padw : int) -> np.array:
 		if (boxes != []) :
 			boxes = np.vstack(boxes)
 			boxes[:, 2:4] = boxes[:, 2:4] - boxes[:, 0:2]
@@ -322,9 +324,11 @@ class YoloDetector(YoloLiteParameters):
 		ratioh, ratiow = srcimg.shape[0] / newh, srcimg.shape[1] / neww
 		return img, newh, neww, ratioh, ratiow, padh, padw
 	
-	def get_nms_results(self, boxes : list, class_confs : list, class_ids : list, kpss : list, priority : bool = False) -> List[Tuple[list, list]]:
+	def get_nms_results(self, boxes : np.array, class_confs : list, class_ids : list, kpss : list, priority : bool = False) -> List[Tuple[list, list]]:
 		results = []
-		nms_results = cv2.dnn.NMSBoxes(boxes, class_confs, self.box_score, self.box_nms_iou) 
+		# nms_results = cv2.dnn.NMSBoxes(boxes, class_confs, self.box_score, self.box_nms_iou) 
+		# nms_results = fast_nms(boxes, np.array(class_confs), self.box_nms_iou) 
+		nms_results = fast_soft_nms(boxes.copy(), np.array(class_confs).copy(), self.box_nms_iou) 
 		if len(nms_results) > 0:
 			for i in nms_results:
 				kpsslist = []

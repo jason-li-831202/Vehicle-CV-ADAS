@@ -1,4 +1,5 @@
 addict
+numba
 scipy
 pycuda
 torchsummary

@@ -99,8 +99,6 @@ class OnnxEngine():
 	def onnx_inference(self, input_tensor):
 		input_name = self.session.get_inputs()[0].name
 		output_names = [output.name for output in self.session.get_outputs()]
-		# TODO : error
-
 		output = self.session.run(output_names, {input_name: input_tensor})
 
 		return output
