@@ -186,7 +186,8 @@ class YoloDetector(YoloLiteParameters):
 		YoloLiteParameters.__init__(self, self.model_type, self.input_shapes, len(self.class_names))
 		if (self.logger) :
 			self.logger.info(f'YoloDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
-			self.logger.info(f"YoloDetector Input Shape : {self.input_shapes} || dtype : {self.input_types}")
+			self.logger.info(f"-> Input Shape : {self.input_shapes}")
+			self.logger.info(f"-> Input Type  : {self.input_types}")
 
 	def __get_class(self, classes_path : str) -> None:
 		assert os.path.isfile(classes_path), Exception("%s is not exist." % classes_path)

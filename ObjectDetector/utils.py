@@ -123,10 +123,10 @@ def fast_soft_nms(dets, scores, iou_thr=0.3, sigma=0.5, score_thr=0.001, method=
             tarea = areas[i]
 
         # IoU calculate
-        xx1 = np.maximum(dets[i, 1], dets[pos:, 1])
-        yy1 = np.maximum(dets[i, 0], dets[pos:, 0])
-        xx2 = np.minimum(dets[i, 3], dets[pos:, 3])
-        yy2 = np.minimum(dets[i, 2], dets[pos:, 2])
+        xx1 = np.maximum(x1[i], x1[pos:])
+        yy1 = np.maximum(y1[i], y1[pos:])
+        xx2 = np.minimum(x2[i], x2[pos:])
+        yy2 = np.minimum(y2[i], y2[pos:])
 
         w = np.maximum(0.0, xx2 - xx1)
         h = np.maximum(0.0, yy2 - yy1)

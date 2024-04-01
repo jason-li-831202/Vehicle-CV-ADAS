@@ -2,11 +2,10 @@ import onnxruntime
 import cv2
 import time, os
 import numpy as np
-from typing import Tuple
 try :
-	from ultrafastLaneDetector.utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from ultrafastLaneDetector.utils import DetectorBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
 except :
-	from .utils import TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from .utils import DetectorBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
 
 def _softmax(x) :
 	# Note : 防止 overflow and underflow problem
@@ -50,20 +49,31 @@ class ModelConfig():
 		self.row_anchor = np.linspace(0.42,1, 72)
 		self.col_anchor = np.linspace(0,1, 81)
 
-class TensorRTEngine(TensorRTBase):
+class TensorRTEngine(EngineBase, TensorRTBase):
 
 	def __init__(self, engine_file_path, cfg):
-		super(TensorRTEngine, self).__init__(engine_file_path)
+		TensorRTBase.__init__(self, engine_file_path)
 		self.cfg = cfg
-		self.cuda_dtype = self.dtype
+		self.engine_dtype = self.dtype
 
-	def get_tensorrt_input_shape(self):
+	def get_engine_input_shape(self):
 		return self.engine.get_binding_shape(0)
 
-	def get_tensorrt_output_shape(self):
-		return self.engine.get_binding_shape(-1)
+	def get_engine_output_shape(self):
+		# Get the number of bindings
+		num_bindings = self.engine.num_bindings
 
-	def tensorrt_inference(self, input_tensor):
+		# Get the output names
+		output_names = []
+		for i in range(num_bindings):
+			if self.engine.binding_is_input(i):
+				continue
+			output_names.append(self.engine.get_binding_name(i))
+		if (len(output_names) != 4) :
+			raise Exception("Output dims is error, please check model. load %d channels not match 4." % len(output_names))
+		return self.engine.get_binding_shape(-1), output_names
+
+	def engine_inference(self, input_tensor):
 		host_outputs = self.inference(input_tensor)
 		# Here we use the first row of output in that batch_size = 1
 		trt_outputs = []
@@ -76,7 +86,7 @@ class TensorRTEngine(TensorRTBase):
 
 		return trt_outputs
 
-class OnnxEngine():
+class OnnxEngine(EngineBase):
 
 	def __init__(self, onnx_file_path):
 		if (onnxruntime.get_device() == 'GPU') :
@@ -84,55 +94,36 @@ class OnnxEngine():
 		else :
 			self.session = onnxruntime.InferenceSession(onnx_file_path)
 		self.providers = self.session.get_providers()
+		self.engine_dtype = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
 		self.framework_type = "onnx"
 
-	def get_onnx_input_shape(self):
+	def get_engine_input_shape(self):
 		return self.session.get_inputs()[0].shape
 
-	def get_onnx_output_shape(self):
+	def get_engine_output_shape(self):
 		output_shape = [output.shape for output in self.session.get_outputs()]
 		output_names = [output.name for output in self.session.get_outputs()]
 		if (len(output_names) != 4) :
-			raise Exception("Output dims is error, please check model. load %d channels not match 4." % len(self.output_names))
+			raise Exception("Output dims is error, please check model. load %d channels not match 4." % len(output_names))
 		return output_shape, output_names
 	
-	def onnx_inference(self, input_tensor):
+	def engine_inference(self, input_tensor):
 		input_name = self.session.get_inputs()[0].name
 		output_names = [output.name for output in self.session.get_outputs()]
 		output = self.session.run(output_names, {input_name: input_tensor})
 
 		return output
 
-class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
+class UltrafastLaneDetectorV2(DetectorBase):
 	_defaults = {
 		"model_path": "models/culane_res18.onnx",
 		"model_type" : LaneModelType.UFLDV2_TUSIMPLE,
 	}
 
-	@classmethod
-	def set_defaults(cls, config) :
-		cls._defaults = config
-
-	@classmethod
-	def check_defaults(cls):
-		return cls._defaults
-		
-	@classmethod
-	def get_defaults(cls, n):
-		if n in cls._defaults:
-			return cls._defaults[n]
-		else:
-			return "Unrecognized attribute name '" + n + "'"
-
 	def __init__(self, model_path : str = None, model_type : LaneModelType = None, logger = None):
-		if (None in [model_path, model_type]) :
-			self.__dict__.update(self._defaults) # set up default values
-		else :
+		DetectorBase.__init__(self, logger)
+		if (None not in [model_path, model_type]) :
 			self.model_path, self.model_type = model_path, model_type
-
-		self.logger = logger
-		self.draw_area_points = []
-		self.draw_area = False
 
 		# Load model configuration based on the model type
 		if ( self.model_type not in [LaneModelType.UFLDV2_TUSIMPLE, LaneModelType.UFLDV2_CULANE]) :
@@ -150,15 +141,15 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 		if not os.path.isfile(model_path):
 			raise Exception("The model path [%s] can't not found!" % model_path)
 		if model_path.endswith('.trt') :
-			TensorRTEngine.__init__(self, model_path, cfg)
+			self.engine = TensorRTEngine(model_path, cfg)
 		else :
-			OnnxEngine.__init__(self, self.model_path)
+			self.engine = OnnxEngine(model_path)
 
-		# Get model info
-		self.getModel_input_details()
-		self.getModel_output_details()
 		if (self.logger) :
-			self.logger.info(f'UfldDetector Type : [{self.framework_type}] || Version : [{self.providers}]')
+			self.logger.info(f'UfldDetectorV2 Type : [{self.engine.framework_type}] || Version : [{self.engine.providers}]')
+		# Set model info
+		self.set_input_details(self.engine)
+		self.set_output_details(self.engine)
 
 	def __prepare_input(self, image : cv2) -> np.ndarray :
 		img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -178,9 +169,9 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 
 		return img_input.astype(self.input_types)
 
-	@staticmethod
-	def __process_output(output, cfg : ModelConfig, local_width :int = 1, original_image_width : int = 1640, original_image_height : int = 590) -> np.ndarray:
-
+	def __process_output(self, output, cfg : ModelConfig, local_width :int = 1) -> np.ndarray:
+		original_image_width = self.img_width
+		original_image_height = self.img_height
 		# output = np.array(output, dtype=np.float32) 
 		output = {"loc_row" : output[0], 'loc_col' : output[1], "exist_row" : output[2], "exist_col" : output[3]}
 		# print(output["loc_row"].shape)
@@ -247,91 +238,16 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 						lanes_detected["right-side"] = True
 		return np.array(list(lanes_points.values()), dtype="object"), list(lanes_detected.values())
 
-	@staticmethod
-	def __adjust_lanes_points(left_lanes_points : list, right_lanes_points : list, image_height : list) -> Tuple[list, list]:
-		# 多项式拟合
-		if (len(left_lanes_points[1]) != 0 ) :
-			leftx, lefty  = list(zip(*left_lanes_points))
-		else :
-			return left_lanes_points, right_lanes_points
-		if (len(right_lanes_points) != 0 ) :
-			rightx, righty  = list(zip(*right_lanes_points))
-		else :
-			return left_lanes_points, right_lanes_points
-
-		if len(lefty) > 10:
-			left_fit = np.polyfit(lefty, leftx, 2)
-		if len(righty) > 10:
-			right_fit = np.polyfit(righty, rightx, 2)
-
-		# Generate x and y values for plotting
-		maxy = image_height - 1
-		miny = image_height // 3
-		if len(lefty):
-			maxy = max(maxy, np.max(lefty))
-			miny = min(miny, np.min(lefty))
-
-		if len(righty):
-			maxy = max(maxy, np.max(righty))
-			miny = min(miny, np.min(righty))
-
-		ploty = np.linspace(miny, maxy, image_height)
-
-		left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-		right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
-
-		# Visualization
-		fix_left_lanes_points = []
-		fix_right_lanes_points = []
-		for i, y in enumerate(ploty):
-			l = int(left_fitx[i])
-			r = int(right_fitx[i])
-			y = int(y)
-			if (y >= min(lefty)) :
-				fix_left_lanes_points.append((l, y))
-			if (y >= min(righty)) :
-				fix_right_lanes_points.append((r, y))
-				# cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
-		return fix_left_lanes_points, fix_right_lanes_points
-
-	@staticmethod
-	def ___check_lanes_area(lanes_detected : list) -> bool :
-		if(lanes_detected != []) :
-			if(lanes_detected[1] and lanes_detected[2]):
-				return True
-		return False
-
-	def getModel_input_details(self) -> None :
-		if (self.framework_type == "trt") :
-			self.input_shape = self.get_tensorrt_input_shape()
-			self.input_types = self.cuda_dtype
-		else :
-			self.input_shape = self.get_onnx_input_shape()
-			self.input_types = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
-
-		self.channes, self.input_height, self.input_width = self.input_shape[1:]
-		if (self.logger) : 
-			if (self.cfg.img_h == self.input_height and self.cfg.img_w == self.input_width) :
-				self.logger.info(f"UfldDetector Input Shape : {self.input_shape} || dtype : {self.input_types}")
-			else :
-				self.logger.war(f"UfldDetector Model Iuput Shape {self.input_height, self.input_width} not equal cfg Input Shape {self.cfg.img_h, self.cfg.img_w}")
-
-	def getModel_output_details(self) -> None :
-		if (self.framework_type == "trt") :
-			self.output_shape = self.get_tensorrt_output_shape()
-		else :
-			self.output_shape, self.output_names = self.get_onnx_output_shape()
-			
 	def DetectFrame(self, image : cv2) -> None:
 		input_tensor = self.__prepare_input(image)
 
 		# Perform inference on the image
-		output = self.tensorrt_inference(input_tensor) if (self.framework_type == "trt") else self.onnx_inference(input_tensor)
+		output = self.engine.engine_inference(input_tensor)
 
 		# Process output data
-		self.lanes_points, self.lanes_detected = self.__process_output(output, self.cfg, original_image_width =  self.img_width, original_image_height = self.img_height)
+		self.lanes_points, self.lanes_detected = self.__process_output(output, self.cfg)
 
-		self.draw_area = self.___check_lanes_area(self.lanes_detected)
+		self.draw_area = self._DetectorBase__check_lanes_area(self.lanes_detected)
 
 	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
 		for lane_num,lane_points in enumerate(self.lanes_points):
@@ -354,21 +270,11 @@ class UltrafastLaneDetectorV2(TensorRTEngine, OnnxEngine):
 			lane_segment_img = image.copy()
 
 			if (adjust_lanes) :
-				left_lanes_points, right_lanes_points = self.__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
+				left_lanes_points, right_lanes_points = self._DetectorBase__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
 			else :
 				left_lanes_points, right_lanes_points = self.lanes_points[1], self.lanes_points[2]
 			self.draw_area_points = [np.vstack((left_lanes_points,np.flipud(right_lanes_points)))]
 			
 			cv2.fillPoly(lane_segment_img, pts = self.draw_area_points, color =color)
 			image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
-
-	def AutoDrawLanes(self, image : cv2, draw_points : bool = True, draw_area : bool = True) -> None:
-		self.DetectFrame(image)
-
-		if (draw_points) :
-			self.DrawDetectedOnFrame(image)
-
-		if (draw_area) :
-			self.DrawAreaOnFrame(image, adjust_lanes=True)
-		return image
 

@@ -235,7 +235,7 @@ if __name__ == "__main__":
 	LOGGER.info("-"*40)
 
 	# lane detection model
-	LOGGER.info("UfldDetector Model Type : {}".format(lane_config["model_type"].name))
+	LOGGER.info("Detector Model Type : {}".format(lane_config["model_type"].name))
 	if ( "UFLDV2" in lane_config["model_type"].name) :
 		UltrafastLaneDetectorV2.set_defaults(lane_config)
 		laneDetector = UltrafastLaneDetectorV2(logger=LOGGER)
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 	transformView = PerspectiveTransformation( (width, height) , logger=LOGGER)
 
 	# object detection model
-	LOGGER.info("YoloDetector Model Type : {}".format(object_config["model_type"].name))
+	LOGGER.info("ObjectDetector Model Type : {}".format(object_config["model_type"].name))
 	YoloDetector.set_defaults(object_config)
 	objectDetector = YoloDetector(logger=LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
