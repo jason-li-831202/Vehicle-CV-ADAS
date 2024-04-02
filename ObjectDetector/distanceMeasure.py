@@ -14,12 +14,12 @@ class SingleCamDistanceMeasure(object):
 					"truck" : (346*INCH, 250*INCH), 
 				 }
 
-	def __init__(self, object_list=["person", "bicycle", "car", "motorbike", "bus", "truck"] ):
+	def __init__(self, object_list: list = ["person", "bicycle", "car", "motorbike", "bus", "truck"] ):
 		self.object_list = object_list
 		self.f = 100 # focal length
 		self.distance_points = []
 
-	def __isInsidePolygon(self, pt, poly ):
+	def __isInsidePolygon(self, pt: tuple, poly: np.ndarray ) -> bool:
 		"""
 		Judgment point is within the polygon range.
 
@@ -45,9 +45,9 @@ class SingleCamDistanceMeasure(object):
 			j=i
 		return c
 
-	def calcDistance(self, boxes) :
+	def updateDistance(self, boxes: list) -> None :
 		"""
-		Calculate the distance of the target object through the size of pixels.
+		Update the distance of the target object through the size of pixels.
 
 		Args:
 			boxes: coordinate information and labels of the target object.
@@ -69,7 +69,7 @@ class SingleCamDistanceMeasure(object):
 					except :
 						pass
  
-	def calcCollisionPoint(self, poly):
+	def calcCollisionPoint(self, poly: np.ndarray) -> typing.Union[list, None]:
 		"""
 		Determine whether the target object is within the main lane lines.
 
@@ -86,7 +86,7 @@ class SingleCamDistanceMeasure(object):
 					return [x, y, d]
 		return None
 
-	def DrawDetectedOnFrame(self, frame_show) :
+	def DrawDetectedOnFrame(self, frame_show: cv2) -> None : 
 		if ( len(self.distance_points) != 0 )  :
 			for x, y, d in self.distance_points:
 				cv2.circle(frame_show, (x, y), 4, (0, 255 , 0), thickness=-1)

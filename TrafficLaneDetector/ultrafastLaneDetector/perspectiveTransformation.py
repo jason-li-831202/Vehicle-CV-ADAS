@@ -24,15 +24,16 @@ class PerspectiveTransformation(object):
                                (self.img_size[0]*0.2, self.img_size[1]),         # bottom-left
                                (self.img_size[0]*0.95, self.img_size[1]),        # bottom-right
                                (self.img_size[0]*0.8, self.img_size[1]*0.7)])    # top-right
-        self.offset_x = self.img_size[0]/4
-        self.offset_y = 0
-        self.dst = np.float32([(self.offset_x, self.offset_y), 
-                                (self.offset_x, img_size[1]-self.offset_y),
-                                (img_size[0]-self.offset_x, img_size[1]-self.offset_y),
-                                (img_size[0]-self.offset_x, self.offset_y),])
+        
+        offset_x = self.img_size[0]/4
+        offset_y = 0
+        self.dst = np.float32([(offset_x, offset_y), 
+                                (offset_x, img_size[1]-offset_y),
+                                (img_size[0]-offset_x, img_size[1]-offset_y),
+                                (img_size[0]-offset_x, offset_y),])
+        
         self.M = cv2.getPerspectiveTransform(self.src, self.dst)
         self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)
-
 
     def updateTransformParams(self, left_lanes, right_lanes, type="Default") :
         """ 
@@ -197,9 +198,9 @@ class PerspectiveTransformation(object):
             veh_pos = ((leftx[719] + rightx[719])  / 2.)
 
             cen_pos = (img.shape[1]/ 2.)
+            distance_from_center = (veh_pos - cen_pos)* lane_xm_per_pix
             cv2.arrowedLine(img, (int(veh_pos), int(y_eval)), (int(veh_pos), int(img.shape[1]/3)), (255, 255, 255), 5, 0, 0 , 0.2)
             cv2.arrowedLine(img, (int(cen_pos), int(y_eval)), (int(cen_pos), int(img.shape[0]/1.3)), (150, 150, 150), 10, 0, 0 , 0.5)
-            distance_from_center = (veh_pos - cen_pos)* lane_xm_per_pix
         else :
             curvature_direction, curvature = None, None
             distance_from_center = None

@@ -68,10 +68,34 @@ class DetectorBase(abc.ABC):
 		
 	def __init__(self, logger):
 		self.__dict__.update(self._defaults) # set up default values
-
 		self.logger = logger
-		self.draw_area_points = []
-		self.draw_area = False
+
+		self._lanes_points = np.array([], dtype=object) # Detect Road Points
+		self._lanes_status = np.array([], dtype=object)	# Detect Road Status
+		self.area_points   = np.array([], dtype=object)	# Arterial Road Points
+		self.area_status   = False 						# Arterial Road Status
+
+	@property
+	def lanes_points(self):
+		return self._lanes_points
+
+	@lanes_points.setter
+	def lanes_points(self, arr : np.ndarray ) -> None:
+		if isinstance(arr, np.ndarray) :
+			self._lanes_points = arr
+		else :
+			raise Exception("The 'lanes_points' must be np.array.")
+
+	@property
+	def lanes_status(self):
+		return self._lanes_status
+
+	@lanes_status.setter
+	def lanes_status(self, value : list ) -> None:
+		for v in value :
+			if type(v)!=bool:
+				raise Exception("The elements of 'lanes_status' must be of type bool.")
+		self._lanes_status = value
 
 	def set_input_details(self, engine) -> None :
 		if hasattr(engine, "get_engine_input_shape"):
@@ -138,13 +162,12 @@ class DetectorBase(abc.ABC):
 				# cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
 		return fix_left_lanes_points, fix_right_lanes_points
 
-	@staticmethod
-	def __check_lanes_area(lanes_status : list) -> bool :
+	def __update_lanes_area(self, lanes_status : list) -> bool :
+		self.area_status = False
 		if(lanes_status != [] and len(lanes_status) % 2 == 0) :
 			index = len(lanes_status) // 2
 			if(lanes_status[index-1] and lanes_status[index]):
-				return True
-		return False
+				self.area_status = True
 
 	@abc.abstractmethod
 	def DetectFrame(self):

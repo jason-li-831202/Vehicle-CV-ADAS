@@ -193,12 +193,12 @@ class UltrafastLaneDetector(DetectorBase):
 		output = self.engine.engine_inference(input_tensor)
 
 		# Process output data
-		self.lanes_points, self.lanes_detected = self.__process_output(output, self.cfg)
+		self.lanes_points, self.lanes_status = self.__process_output(output, self.cfg)
 
-		self.draw_area = self._DetectorBase__check_lanes_area(self.lanes_detected)
+		self._DetectorBase__update_lanes_area(self.lanes_status)
 
 	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
-		for lane_num,lane_points in enumerate(self.lanes_points):
+		for lane_num, lane_points in enumerate(self.lanes_points):
 
 			if ( lane_num==1 and type == OffsetType.RIGHT) :
 				color = (0, 0, 255)
@@ -208,22 +208,22 @@ class UltrafastLaneDetector(DetectorBase):
 				color = lane_colors[lane_num]
 
 			for lane_point in lane_points:
-				cv2.circle(image, (lane_point[0],lane_point[1]), 3, color, -1)
+				cv2.circle(image, (lane_point[0], lane_point[1]), 3, color, -1)
 
 	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), adjust_lanes : bool = True) -> None :
 		H, W, _ = image.shape
-		self.draw_area_points = []
+		self.area_points = np.array([], dtype=object)
 		# Draw a mask for the current lane
-		if(self.draw_area):
+		if(self.area_status):
 			lane_segment_img = image.copy()
 
 			if (adjust_lanes) :
 				left_lanes_points, right_lanes_points = self._DetectorBase__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
 			else :
 				left_lanes_points, right_lanes_points = self.lanes_points[1], self.lanes_points[2]
-			self.draw_area_points = [np.vstack((left_lanes_points,np.flipud(right_lanes_points)))]
-
-			cv2.fillPoly(lane_segment_img, pts = self.draw_area_points, color =color)
+			self.area_points = np.vstack((left_lanes_points, np.flipud(right_lanes_points)))
+			
+			cv2.fillPoly(lane_segment_img, pts = [self.area_points], color =color)
 			image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
 
 

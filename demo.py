@@ -268,19 +268,17 @@ if __name__ == "__main__":
 			lane_infer_time = round(time.time() - lane_time, 4)
 
 			#========================= Analyze Status ========================
-			distanceDetector.calcDistance(objectDetector.object_info)
-			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.draw_area_points)
+			distanceDetector.updateDistance(objectDetector.object_info)
+			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.area_points)
 
-			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.draw_area)
-
-
-			if (analyzeMsg.CheckStatus() and laneDetector.draw_area ) :
-				transformView.updateTransformParams(laneDetector.lanes_points[1], laneDetector.lanes_points[2], analyzeMsg.transform_status)
+			if (analyzeMsg.CheckStatus() and laneDetector.area_status ) :
+				transformView.updateTransformParams(*laneDetector.lanes_points[1:3], analyzeMsg.transform_status)
 			birdview_show = transformView.transformToBirdView(frame_show)
 
 			birdview_lanes_points = [transformView.transformToBirdViewPoints(lanes_point) for lanes_point in laneDetector.lanes_points]
-			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(birdview_show, birdview_lanes_points[1], birdview_lanes_points[2])
+			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(birdview_show, *birdview_lanes_points[1:3])
 
+			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.area_status)
 			analyzeMsg.UpdateOffsetStatus(vehicle_offset)
 			analyzeMsg.UpdateRouteStatus(vehicle_direction, vehicle_curvature)
 
