@@ -3,10 +3,14 @@ import scipy.special
 import cv2
 import time, os, math
 import numpy as np
+from typing import Tuple
 try :
-	from ultrafastLaneDetector.utils import DetectorBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from ultrafastLaneDetector.utils import LaneDetectBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from ultrafastLaneDetector.LaneDetector import LaneDetectBase
 except :
-	from .utils import DetectorBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from .utils import EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from .LaneDetector import LaneDetectBase
+
 
 class ModelConfig():
 
@@ -89,14 +93,14 @@ class OnnxEngine(EngineBase):
 		output = self.session.run([output_name], {input_name: input_tensor})
 		return output
 
-class UltrafastLaneDetector(DetectorBase):
+class UltrafastLaneDetector(LaneDetectBase):
 	_defaults = {
 		"model_path": "models/tusimple_18.onnx",
 		"model_type" : LaneModelType.UFLD_TUSIMPLE,
 	}
 
 	def __init__(self, model_path : str = None, model_type : LaneModelType = None, logger = None):
-		DetectorBase.__init__(self, logger)
+		LaneDetectBase.__init__(self, logger)
 		if (None not in [model_path, model_type]) :
 			self.model_path, self.model_type = model_path, model_type
 
@@ -145,7 +149,7 @@ class UltrafastLaneDetector(DetectorBase):
 
 		return img_input.astype(self.input_types)
 
-	def __process_output(self, output, cfg : ModelConfig) -> np.ndarray:		
+	def __process_output(self, output, cfg : ModelConfig) -> Tuple[np.ndarray, list]:		
 		# Parse the output of the model
 
 		processed_output = np.squeeze(output[0])
@@ -186,19 +190,21 @@ class UltrafastLaneDetector(DetectorBase):
 			lanes_points.append(lane_points)
 		return np.array(lanes_points, dtype=object), np.array(lanes_detected, dtype=object)
 
-	def DetectFrame(self, image : cv2) -> None:
+	def DetectFrame(self, image : cv2, adjust_lanes : bool = True) -> None:
 		input_tensor = self.__prepare_input(image)
 
 		# Perform inference on the image
 		output = self.engine.engine_inference(input_tensor)
 
 		# Process output data
-		self.lanes_points, self.lanes_status = self.__process_output(output, self.cfg)
+		self.lane_info.lanes_points, self.lane_info.lanes_status = self.__process_output(output, self.cfg)
 
-		self._DetectorBase__update_lanes_area(self.lanes_status)
-
+		self.adjust_lanes = adjust_lanes
+		self._LaneDetectBase__update_lanes_status(self.lane_info.lanes_status)
+		self._LaneDetectBase__update_lanes_area(self.lane_info.lanes_points, self.img_height)
+		
 	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
-		for lane_num, lane_points in enumerate(self.lanes_points):
+		for lane_num, lane_points in enumerate(self.lane_info.lanes_points):
 
 			if ( lane_num==1 and type == OffsetType.RIGHT) :
 				color = (0, 0, 255)
@@ -210,20 +216,13 @@ class UltrafastLaneDetector(DetectorBase):
 			for lane_point in lane_points:
 				cv2.circle(image, (lane_point[0], lane_point[1]), 3, color, -1)
 
-	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), adjust_lanes : bool = True) -> None :
+	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0)) -> None :
 		H, W, _ = image.shape
-		self.area_points = np.array([], dtype=object)
 		# Draw a mask for the current lane
-		if(self.area_status):
+		if(self.lane_info.area_status):
 			lane_segment_img = image.copy()
 
-			if (adjust_lanes) :
-				left_lanes_points, right_lanes_points = self._DetectorBase__adjust_lanes_points(self.lanes_points[1], self.lanes_points[2], self.img_height)
-			else :
-				left_lanes_points, right_lanes_points = self.lanes_points[1], self.lanes_points[2]
-			self.area_points = np.vstack((left_lanes_points, np.flipud(right_lanes_points)))
-			
-			cv2.fillPoly(lane_segment_img, pts = [self.area_points], color =color)
+			cv2.fillPoly(lane_segment_img, pts = [self.lane_info.area_points], color =color)
 			image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
 
 

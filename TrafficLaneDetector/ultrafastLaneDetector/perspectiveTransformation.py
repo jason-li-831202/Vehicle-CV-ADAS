@@ -1,6 +1,7 @@
 import cv2
 import logging
 import numpy as np
+from typing import *
 try :
     from ultrafastLaneDetector.utils import  lane_colors, OffsetType
 except :
@@ -35,20 +36,22 @@ class PerspectiveTransformation(object):
         self.M = cv2.getPerspectiveTransform(self.src, self.dst)
         self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)
 
-    def updateTransformParams(self, left_lanes, right_lanes, type="Default") :
+    def updateTransformParams(self, left_lanes: Union[list, np.ndarray], right_lanes: Union[list, np.ndarray], type: str = "Default") -> None :
         """ 
         Update the transition area of the frontal view
 
         Args:
-            left_lanes (np.array): Left lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
-            right_lanes (np.array): Right lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+            left_lanes (list, np.array): Left lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
+            right_lanes (list, np.array): Right lanes points.[[x1, y1], [x2, y2], [x3, y3] ... [xn, yn]]
             type: Adjust the area of specific points, type-"Top", "Bottom", "Default"
 
         Returns:
             None
         """
-        if not (isinstance(left_lanes, list) and isinstance(right_lanes, list)) : 
-            raise TypeError('lanes must be list type.')
+        if not isinstance(left_lanes, list) : 
+            left_lanes = left_lanes.tolist()
+        if not isinstance(right_lanes, list):
+            right_lanes = right_lanes.tolist()
 
         if (len(left_lanes) and len(right_lanes)) :
             left_lanes = np.squeeze(left_lanes)
@@ -83,7 +86,7 @@ class PerspectiveTransformation(object):
             self.M_inv = cv2.getPerspectiveTransform(self.dst, self.src)
 
 
-    def transformToBirdView(self, img, flags=cv2.INTER_LINEAR):
+    def transformToBirdView(self, img: cv2, flags=cv2.INTER_LINEAR):
         """ Take a frontal view image and transform to bird view
 
         Args:
@@ -100,7 +103,7 @@ class PerspectiveTransformation(object):
         return cv2.warpPerspective(img, self.M, self.img_size, flags=flags)
 
 
-    def transformToFrontalView(self, img, flags=cv2.INTER_LINEAR):
+    def transformToFrontalView(self, img: cv2, flags=cv2.INTER_LINEAR) -> cv2:
         """ Take a bird view image and transform it to frontal view
 
         Args:
@@ -114,7 +117,7 @@ class PerspectiveTransformation(object):
         return cv2.warpPerspective(img, self.M_inv, self.img_size, flags=flags)
     
 
-    def transformToBirdViewPoints(self, points):
+    def transformToBirdViewPoints(self, points: list) -> Union[list, np.ndarray]:
         """
         To get bird view points in the new perspective from frontal view points in the image.
 
@@ -139,7 +142,7 @@ class PerspectiveTransformation(object):
         return []
 
 
-    def calcCurveAndOffset(self, img, left_lanes, right_lanes):
+    def calcCurveAndOffset(self, img: cv2, left_lanes: np.ndarray, right_lanes: np.ndarray) -> Tuple[Tuple, float]:
         """
         Calculate the offset and road curve from the center of the vehicle.
         
@@ -211,7 +214,7 @@ class PerspectiveTransformation(object):
         return (curvature_direction, curvature), distance_from_center
 
 
-    def DrawDetectedOnBirdView(self, image, lanes_points, type=OffsetType.UNKNOWN) :
+    def DrawDetectedOnBirdView(self, image: cv2, lanes_points: list, type: OffsetType = OffsetType.UNKNOWN) -> None:
         for lane_num, lane_points in enumerate(lanes_points):
             if ( lane_num==1 and type == OffsetType.RIGHT) :
                 color = (0, 0, 255)
@@ -223,7 +226,7 @@ class PerspectiveTransformation(object):
                 cv2.circle(image, (int(x), int(y)), 10, color, -1)
 
 
-    def DrawTransformFrontalViewArea(self, image):
+    def DrawTransformFrontalViewArea(self, image: cv2) -> None:
         vector = np.vectorize(np.int_)
         cv2.line(image, vector(self.src[0]), vector(self.src[1]), (0, 0, 255), 5)
         cv2.line(image, vector(self.src[1]), vector(self.src[2]), (0, 0, 255), 5)

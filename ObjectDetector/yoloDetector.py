@@ -132,9 +132,6 @@ class TensorRTParameters():
 		else :
 			return np.reshape(trt_outputs, (-1, self.num_classes+5))
 
-
-
-
 class YoloDetector(YoloLiteParameters):
 	_defaults = {
 		"model_path": './models/yolov5n-coco.onnx',
@@ -273,7 +270,10 @@ class YoloDetector(YoloLiteParameters):
 
 	@staticmethod
 	def convert_boxes_coordinate(boxes : list, ratiow : float, ratioh : float, padh : int, padw : int) -> np.array:
-		if (boxes != []) :
+		if not isinstance(boxes, np.ndarray):
+			boxes = np.array(boxes)
+
+		if (boxes.size > 0) :
 			boxes = np.vstack(boxes)
 			boxes[:, 2:4] = boxes[:, 2:4] - boxes[:, 0:2]
 			boxes[:, 0] = (boxes[:, 0] - padw) * ratiow
@@ -328,8 +328,15 @@ class YoloDetector(YoloLiteParameters):
 	def get_nms_results(self, boxes : np.array, class_confs : list, class_ids : list, kpss : list, priority : bool = False) -> List[Tuple[list, list]]:
 		results = []
 		# nms_results = cv2.dnn.NMSBoxes(boxes, class_confs, self.box_score, self.box_nms_iou) 
-		# nms_results = fast_nms(boxes, np.array(class_confs), self.box_nms_iou) 
-		nms_results = fast_soft_nms(boxes.copy(), np.array(class_confs).copy(), self.box_nms_iou) 
+		if (boxes.shape[0] > 0) :
+			if (boxes.shape[0] == 1) :
+				nms_results = [0]
+			else :
+				# nms_results = fast_nms(boxes, np.array(class_confs), self.box_nms_iou) 
+				nms_results = fast_soft_nms(boxes.copy(), np.array(class_confs).copy(), self.box_nms_iou) 
+		else :
+			nms_results = []
+
 		if len(nms_results) > 0:
 			for i in nms_results:
 				kpsslist = []
@@ -340,7 +347,6 @@ class YoloDetector(YoloLiteParameters):
 				if (kpss != []) :
 					for j in range(5):
 						kpsslist.append( ( int(kpss[i, j, 0]) , int(kpss[i, j, 1]) ) )
-				
 				bbox = boxes[i]
 				bbox = self.adjust_boxes_ratio(bbox, None, None)
 

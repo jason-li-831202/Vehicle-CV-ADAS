@@ -1,6 +1,6 @@
 import numpy as np
 from enum import Enum
-from numba import jit
+from numba import jit, typed
 
 class CollisionType(Enum):
     UNKNOWN = "Determined ..."
@@ -44,7 +44,7 @@ def fast_nms(dets: np.array, scores: np.array, iou_thr: float):
 
     areas = (x2 - x1) * (y2 - y1)
     order = scores.argsort()[::-1]
-
+    
     keep = []
     while order.size > 0:
         i = order[0]

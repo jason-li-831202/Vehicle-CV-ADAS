@@ -64,3 +64,4 @@ ObjectDetector/temp/test.avi
 TrafficLaneDetector/models/culane_18.trt
 ObjectDetector/__pycache__/utils.cpython-37.pyc
 ObjectDetector/__pycache__/yoloDetector.cpython-37.pyc
+ObjectDetector/__pycache__/distanceMeasure.cpython-37.pyc

@@ -26,6 +26,8 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
 
 <h1 id="Requirements">➤ Requirements</h1>
 
+* **Python 3.7+**
+
 * **OpenCV**, **Scikit-learn**, **onnxruntime**, **pycuda** and **pytorch**.
 
 * **Install :**

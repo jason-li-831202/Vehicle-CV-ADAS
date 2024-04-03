@@ -79,9 +79,9 @@ class SingleCamDistanceMeasure(object):
 		Returns:
 			[Xcenter, Ybottom, distance]
 		"""
-
 		if ( len(self.distance_points) != 0 and len(poly) )  :
-			for x, y, d in self.distance_points:
+			sorted_distance_points = sorted(self.distance_points, key=lambda arr: arr[2])
+			for x, y, d in sorted_distance_points:
 				if (self.__isInsidePolygon( (x, y), np.squeeze(poly) )) :
 					return [x, y, d]
 		return None

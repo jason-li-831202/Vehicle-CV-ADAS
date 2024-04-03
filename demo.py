@@ -25,7 +25,7 @@ object_config = {
 	"model_type" : ObjectModelType.YOLOV9,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
-	"box_nms_iou" : 0.45
+	"box_nms_iou" : 0.5
 }
 
 # Priority : FCWS > LDWS > LKAS
@@ -269,16 +269,16 @@ if __name__ == "__main__":
 
 			#========================= Analyze Status ========================
 			distanceDetector.updateDistance(objectDetector.object_info)
-			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.area_points)
+			vehicle_distance = distanceDetector.calcCollisionPoint(laneDetector.lane_info.area_points)
 
-			if (analyzeMsg.CheckStatus() and laneDetector.area_status ) :
-				transformView.updateTransformParams(*laneDetector.lanes_points[1:3], analyzeMsg.transform_status)
+			if (analyzeMsg.CheckStatus() and laneDetector.lane_info.area_status ) :
+				transformView.updateTransformParams(*laneDetector.lane_info.lanes_points[1:3], analyzeMsg.transform_status)
 			birdview_show = transformView.transformToBirdView(frame_show)
 
-			birdview_lanes_points = [transformView.transformToBirdViewPoints(lanes_point) for lanes_point in laneDetector.lanes_points]
+			birdview_lanes_points = [transformView.transformToBirdViewPoints(lanes_point) for lanes_point in laneDetector.lane_info.lanes_points]
 			(vehicle_direction, vehicle_curvature) , vehicle_offset = transformView.calcCurveAndOffset(birdview_show, *birdview_lanes_points[1:3])
 
-			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.area_status)
+			analyzeMsg.UpdateCollisionStatus(vehicle_distance, laneDetector.lane_info.area_status)
 			analyzeMsg.UpdateOffsetStatus(vehicle_offset)
 			analyzeMsg.UpdateRouteStatus(vehicle_direction, vehicle_curvature)
 
