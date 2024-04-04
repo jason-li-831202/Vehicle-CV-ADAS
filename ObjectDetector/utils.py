@@ -1,149 +1,182 @@
 import numpy as np
 from enum import Enum
-from numba import jit, typed
+from numba import jit
+from typing import *
 
 class CollisionType(Enum):
-    UNKNOWN = "Determined ..."
-    NORMAL = "Normal Risk"
-    PROMPT = "Prompt Risk"
-    WARNING = "Warning Risk"
+	UNKNOWN = "Determined ..."
+	NORMAL = "Normal Risk"
+	PROMPT = "Prompt Risk"
+	WARNING = "Warning Risk"
 
 
 class ObjectModelType(Enum):
-    YOLOV5 = 0
-    YOLOV5_LITE = 1
-    YOLOV6 = 2
-    YOLOV7 = 3
-    YOLOV8 = 4
-    YOLOV9 = 5
+	YOLOV5 = 0
+	YOLOV5_LITE = 1
+	YOLOV6 = 2
+	YOLOV7 = 3
+	YOLOV8 = 4
+	YOLOV9 = 5
 
 def hex_to_rgb(value):
-    value = value.lstrip('#')
-    lv = len(value)
-    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+	value = value.lstrip('#')
+	lv = len(value)
+	return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
 
-@jit(nopython=True)
-def fast_nms(dets: np.array, scores: np.array, iou_thr: float):
-    """
-    It's different from original nms because we have float coordinates on range [0; 1]
+class NMS(object):
+	def __init__(self):
+		pass
 
-    Args:
-        dets: numpy array of boxes with shape: (N, 4). Order: x1, y1, x2, y2, score. All variables in range [0; 1]
-        scores: numpy array of confidence.
-        iou_thr: IoU value for boxes.
+	@staticmethod	
+	def fast_nms(dets: Union[list, np.ndarray], scores:  Union[list, np.ndarray], iou_thr: float, dets_type: str = "xyxy"):
+		"""
+		It's different from original nms because we have float coordinates on range [0; 1]
 
-    Returns:
-        Index of boxes to keep
-    """
-    
-    x1 = dets[:, 0]
-    y1 = dets[:, 1]
-    x2 = dets[:, 2]
-    y2 = dets[:, 3]
+		Args:
+			dets: numpy array of boxes with shape: (N, 4). Defalut Order: x1, y1, x2, y2.
+			scores: numpy array of confidence.
+			iou_thr: IoU value for boxes.
+			dets_type: boxes order format - "xyxy", "xywh". Defalut: xyxy
 
-    areas = (x2 - x1) * (y2 - y1)
-    order = scores.argsort()[::-1]
-    
-    keep = []
-    while order.size > 0:
-        i = order[0]
-        keep.append(i)
-        xx1 = np.maximum(x1[i], x1[order[1:]])
-        yy1 = np.maximum(y1[i], y1[order[1:]])
-        xx2 = np.minimum(x2[i], x2[order[1:]])
-        yy2 = np.minimum(y2[i], y2[order[1:]])
+		Returns:
+			Index of boxes to keep
+		"""
+		_dets =  np.array(dets) if not isinstance(dets, np.ndarray) else dets.copy()
+		_scores = np.array(scores) if not isinstance(scores, np.ndarray) else scores.copy()
+		if (_dets.shape[0] > 0) :
+			if (dets_type == "xywh") :
+				_dets[:, 2:4] = _dets[:, 0:2] + _dets[:, 2:4]
+			return NMS().__fast_nms(_dets, _scores, iou_thr)
+		else :
+			return []
+	
+	@staticmethod	
+	@jit(nopython=True)
+	def __fast_nms(dets: np.array, scores: np.array, iou_thr: float):
+		if len(dets) == 1:
+			return [0]
+		
+		x1 = dets[:, 0]
+		y1 = dets[:, 1]
+		x2 = dets[:, 2]
+		y2 = dets[:, 3]
 
-        w = np.maximum(0.0, xx2 - xx1)
-        h = np.maximum(0.0, yy2 - yy1)
-        inter = w * h
-        ovr = inter / (areas[i] + areas[order[1:]] - inter)
-        inds = np.where(ovr <= iou_thr)[0]
-        order = order[inds + 1]
+		areas = (x2 - x1) * (y2 - y1)
+		order = scores.argsort()[::-1]
+		
+		keep = []
+		while order.size > 0:
+			i = order[0]
+			keep.append(i)
+			xx1 = np.maximum(x1[i], x1[order[1:]])
+			yy1 = np.maximum(y1[i], y1[order[1:]])
+			xx2 = np.minimum(x2[i], x2[order[1:]])
+			yy2 = np.minimum(y2[i], y2[order[1:]])
 
-    return keep
+			w = np.maximum(0.0, xx2 - xx1)
+			h = np.maximum(0.0, yy2 - yy1)
+			inter = w * h
+			ovr = inter / (areas[i] + areas[order[1:]] - inter)
 
-@jit(nopython=True)
-def fast_soft_nms(dets, scores, iou_thr=0.3, sigma=0.5, score_thr=0.001, method='linear'):
-    """Pure python implementation of soft NMS as described in the paper
-    `Improving Object Detection With One Line of Code`_.
+			inds = np.where(ovr <= iou_thr)[0]
+			order = order[inds + 1]
 
-    Args:
-        dets (numpy.array): Detection results with shape `(num, 4)`,
-            data in second dimension are [x1, y1, x2, y2] respectively.
-        scores (numpy.array): scores for boxes
-        iou_thr (float): IOU threshold. Only work when method is `linear`
-            or 'greedy'.
-        sigma (float): Gaussian function parameter. Only work when method
-            is `gaussian`.
-        score_thr (float): Boxes that score less than the.
-        method (str): Rescore method. Only can be `linear`, `gaussian`
-            or 'greedy'.
-    Returns:
-        index of boxes to keep
-    """
+		return keep
 
-    # indexes concatenate boxes with the last column
-    N = dets.shape[0]
-    indexes = np.arange(N).reshape(N, 1) # indexes = np.array([np.arange(N)])
-    dets = np.concatenate((dets, indexes), axis=1) # dets = np.concatenate((dets, indexes.T), axis=1)
+	@staticmethod	
+	def fast_soft_nms(dets: Union[list, np.ndarray], scores:  Union[list, np.ndarray], iou_thr: float = 0.3, 
+				  sigma: float = 0.5, score_thr: float = 0.001, dets_type: str = "xyxy", method: str = 'linear'):
+		"""Pure python implementation of soft NMS as described in the paper
+		`Improving Object Detection With One Line of Code`_.
 
-    # the order of boxes coordinate is [y1, x1, y2, x2]
-    y1 = dets[:, 1]
-    x1 = dets[:, 0]
-    y2 = dets[:, 3]
-    x2 = dets[:, 2]
-    areas = (x2 - x1) * (y2 - y1)
+		Args:
+			dets (numpy.array | list): Detection results with shape `(num, 4)`,
+				data in second dimension are [x1, y1, x2, y2] respectively.
+			scores (numpy.array | list): scores for boxes
+			iou_thr (float): IOU threshold. Only work when method is `linear`
+				or 'greedy'.
+			sigma (float): Gaussian function parameter. Only work when method
+				is `gaussian`.
+			score_thr (float): Boxes that score less than the.
+			dets_type: boxes order format - "xyxy", "xywh". Defalut: xyxy
+			method (str): Rescore method. Only can be `linear`, `gaussian`
+				or 'greedy'.
+				
+		Returns:
+			index of boxes to keep
+		"""
+		_dets =  np.array(dets) if not isinstance(dets, np.ndarray) else dets.copy()
+		_scores = np.array(scores) if not isinstance(scores, np.ndarray) else scores.copy()
+		if (_dets.shape[0] > 0) :
+			if (dets_type == "xywh") :
+				_dets[:, 2:4] = _dets[:, 0:2] + _dets[:, 2:4]
+			arg = iou_thr, sigma, score_thr, method
+			return NMS().__fast_soft_nms(_dets, _scores, *arg)
+		else :
+			return []
+	
+	@staticmethod	
+	@jit(nopython=True)
+	def __fast_soft_nms(dets: np.array, sc: np.array, iou_thr: float = 0.3, 
+					sigma: float = 0.5, score_thr: float = 0.001, method: str = 'linear'):
+		if dets.shape[0] == 1:
+			return np.zeros(1).astype(np.int32)
+		
+		# indexes concatenate boxes with the last column
+		N = dets.shape[0]
+		indexes = np.arange(N).reshape(N, 1) # indexes = np.array([np.arange(N)])
+		dets = np.concatenate((dets, indexes), axis=1) # dets = np.concatenate((dets, indexes.T), axis=1)
 
-    for i in range(N):
-        # intermediate parameters for later parameters exchange
-        tBD = dets[i, :] # tBD = dets[i, :].copy()
-        tscore = scores[i]
-        tarea = areas[i] # tarea = areas[i].copy()
-        pos = i + 1
+		# the order of boxes coordinate is [y1,x1,y2,x2]
+		y1 = dets[:, 0]
+		x1 = dets[:, 1]
+		y2 = dets[:, 2]
+		x2 = dets[:, 3]
+		scores = sc
+		areas = (x2 - x1 + 1) * (y2 - y1 + 1)
 
-        #
-        if i != N - 1:
-            maxscore = np.max(scores[pos:])
-            maxpos = np.argmax(scores[pos:])
-        else:
-            maxscore = scores[-1]
-            maxpos = 0
-        if tscore < maxscore:
-            dets[i, :] = dets[maxpos + i + 1, :]
-            dets[maxpos + i + 1, :] = tBD
-            tBD = dets[i, :]
+		for i in range(N):
+			tBD = dets[i, :]
+			tscore = sc[i]
+			tarea = areas[i]
+			pos = i + 1
 
-            scores[i] = scores[maxpos + i + 1]
-            scores[maxpos + i + 1] = tscore
-            tscore = scores[i]
+			if i != N - 1:
+				maxscore = np.max(sc[pos:])
+				maxpos = np.argmax(sc[pos:]) + pos
+			else:
+				maxscore = scores[-1]
+				maxpos = 0
+			if tscore < maxscore:
+				dets[i, :], dets[maxpos, :] = dets[maxpos, :], tBD
+				scores[i], scores[maxpos] = scores[maxpos], tscore
+				areas[i], areas[maxpos] = areas[maxpos], tarea
 
-            areas[i] = areas[maxpos + i + 1]
-            areas[maxpos + i + 1] = tarea
-            tarea = areas[i]
+			# IoU calculate
+			xx1 = np.maximum(dets[i, 1], dets[pos:, 1])
+			yy1 = np.maximum(dets[i, 0], dets[pos:, 0])
+			xx2 = np.minimum(dets[i, 3], dets[pos:, 3])
+			yy2 = np.minimum(dets[i, 2], dets[pos:, 2])
 
-        # IoU calculate
-        xx1 = np.maximum(x1[i], x1[pos:])
-        yy1 = np.maximum(y1[i], y1[pos:])
-        xx2 = np.minimum(x2[i], x2[pos:])
-        yy2 = np.minimum(y2[i], y2[pos:])
+			w = np.maximum(0.0, xx2 - xx1 + 1)
+			h = np.maximum(0.0, yy2 - yy1 + 1)
+			inter = w * h
+			ovr = inter / (areas[i] + areas[pos:] - inter)
 
-        w = np.maximum(0.0, xx2 - xx1)
-        h = np.maximum(0.0, yy2 - yy1)
-        inter = w * h
-        ovr = inter / (areas[i] + areas[pos:] - inter)
+			# Three methods: 1.linear 2.gaussian 3.original NMS
+			if method == 1:  # linear
+				weight = np.ones(ovr.shape)
+				weight[ovr > iou_thr] = weight[ovr > iou_thr] - ovr[ovr > iou_thr]
+			elif method == 2:  # gaussian
+				weight = np.exp(-(ovr * ovr) / sigma)
+			else:  # original NMS
+				weight = np.ones(ovr.shape)
+				weight[ovr > iou_thr] = 0
 
-        if method == "linear":
-            weight = np.ones(ovr.shape)
-            weight[ovr > iou_thr] = weight[ovr > iou_thr] - ovr[ovr > iou_thr]
-        elif method == "gaussian":
-            weight = np.exp(-(ovr * ovr) / sigma)
-        else:  # original NMS
-            weight = np.ones(ovr.shape)
-            weight[ovr > iou_thr] = 0
+			scores[pos:] = weight * scores[pos:]
 
-        scores[pos:] *= weight
+		# select the boxes and keep the corresponding indexes
+		keep = dets[:, 4][scores > score_thr]
 
-    # select the boxes and keep the corresponding indexes
-    keep = np.where(scores >= score_thr)[0]
-    return keep
+		return keep.astype(np.int32)
