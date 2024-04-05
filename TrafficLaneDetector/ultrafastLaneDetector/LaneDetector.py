@@ -94,9 +94,11 @@ class LaneDetectBase(abc.ABC):
 	def set_output_details(self, engine) -> None :
 		if hasattr(engine, "get_engine_output_shape"):
 			self.output_shape, self.output_names = engine.get_engine_output_shape()
+			if (self.logger) : 
+				self.logger.info(f"-> Output Shape : {self.output_shape}")
 		else :
 			self.logger.error(f"engine does not adhere to the naming convention of the 'EngineBase' class")
-	
+
 	@staticmethod
 	def __adjust_lanes_points(left_lanes_points : list, right_lanes_points : list, image_height : list) -> Tuple[list, list]:
 		# 多项式拟合

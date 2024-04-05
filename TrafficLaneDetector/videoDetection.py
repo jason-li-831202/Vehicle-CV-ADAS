@@ -6,8 +6,8 @@ from ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV
 
 
 video_path = "./temp/demo-4.mp4"
-model_path = "models/tusimple_18.onnx"
-model_type = LaneModelType.UFLD_TUSIMPLE
+model_path = "models/culane_18.onnx"
+model_type = LaneModelType.UFLD_CULANE
 
 if __name__ == "__main__":
 	# Initialize video

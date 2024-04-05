@@ -1,16 +1,17 @@
-import onnxruntime
 import scipy.special
 import cv2
-import time, os, math
 import numpy as np
 from typing import Tuple
 try :
-	from ultrafastLaneDetector.utils import LaneDetectBase, EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	import sys
+	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors
 	from ultrafastLaneDetector.LaneDetector import LaneDetectBase
+	sys.path.append("..")
+	from coreEngine import TensorRTEngine, OnnxEngine
 except :
-	from .utils import EngineBase, TensorRTBase, LaneModelType, OffsetType, lane_colors
+	from .utils import LaneModelType, OffsetType, lane_colors
 	from .LaneDetector import LaneDetectBase
-
+	from coreEngine import TensorRTEngine, OnnxEngine
 
 class ModelConfig():
 
@@ -36,63 +37,6 @@ class ModelConfig():
 		self.cls_num_per_lane = 18
 		self.row_anchor = [round(value) for value in np.linspace(121, 287, self.cls_num_per_lane)]
 
-class TensorRTEngine(EngineBase, TensorRTBase):
-
-	def __init__(self, engine_file_path, cfg):
-		TensorRTBase.__init__(self, engine_file_path)
-		self.cfg = cfg
-		self.engine_dtype = self.dtype
-
-	def get_engine_input_shape(self):
-		return self.engine.get_binding_shape(0)
-
-	def get_engine_output_shape(self):
-		# Get the number of bindings
-		num_bindings = self.engine.num_bindings
-
-		# Get the output names
-		output_names = []
-		for i in range(num_bindings):
-			if self.engine.binding_is_input(i):
-				continue
-			output_names.append(self.engine.get_binding_name(i))
-		if (len(output_names) != 1) :
-			raise Exception("Output dims is error, please check model. load %d channels not match 1." % len(output_names))
-		return (1, 1, self.cfg.cls_num_per_lane, self.cfg.num_lanes), output_names
-
-	def engine_inference(self, input_tensor):
-		host_outputs = self.inference(input_tensor)
-		# Here we use the first row of output in that batch_size = 1
-		trt_outputs = host_outputs[0]
-		return np.reshape(trt_outputs, (1, -1, self.cfg.cls_num_per_lane, self.cfg.num_lanes) )
-
-class OnnxEngine(EngineBase):
-
-	def __init__(self, onnx_file_path):
-		if (onnxruntime.get_device() == 'GPU') :
-			self.session = onnxruntime.InferenceSession(onnx_file_path, providers=['CUDAExecutionProvider'])
-		else :
-			self.session = onnxruntime.InferenceSession(onnx_file_path)
-		self.providers = self.session.get_providers()
-		self.engine_dtype = np.float16 if 'float16' in self.session.get_inputs()[0].type else np.float32
-		self.framework_type = "onnx"
-
-	def get_engine_input_shape(self):
-		return self.session.get_inputs()[0].shape
-
-	def get_engine_output_shape(self):
-		output_shape = [output.shape for output in self.session.get_outputs()]
-		output_names = [output.name for output in self.session.get_outputs()]
-		if (len(output_names) != 1) :
-			raise Exception("Output dims is error, please check model. load %d channels not match 1." % len(output_names))
-		return output_shape[0], output_names
-	
-	def engine_inference(self, input_tensor):
-		input_name = self.session.get_inputs()[0].name
-		output_name = self.session.get_outputs()[0].name
-		output = self.session.run([output_name], {input_name: input_tensor})
-		return output
-
 class UltrafastLaneDetector(LaneDetectBase):
 	_defaults = {
 		"model_path": "models/tusimple_18.onnx",
@@ -112,15 +56,14 @@ class UltrafastLaneDetector(LaneDetectBase):
 		self.cfg = ModelConfig(self.model_type)
 
 		# Initialize model
-		self._initialize_model(self.model_path, self.cfg)
+		self._initialize_model(self.model_path)
 		
-	def _initialize_model(self, model_path : str, cfg : ModelConfig) -> None:
+	def _initialize_model(self, model_path : str) -> None:
 		if (self.logger) :
 			self.logger.debug("model path: %s." % model_path)
-		if not os.path.isfile(model_path):
-			raise Exception("The model path [%s] can't not found!" % model_path)
+
 		if model_path.endswith('.trt') :
-			self.engine = TensorRTEngine(model_path, cfg)
+			self.engine = TensorRTEngine(model_path)
 		else :
 			self.engine = OnnxEngine(model_path)
 
@@ -130,7 +73,9 @@ class UltrafastLaneDetector(LaneDetectBase):
 		# Set model info
 		self.set_input_details(self.engine)
 		self.set_output_details(self.engine)
-
+		if (len(self.output_names) != 1) :
+			raise Exception("Output dims is error, please check model. load %d channels not match 1." % len(self.output_names))
+		
 	def __prepare_input(self, image : cv2) -> np.ndarray :
 		self.h_ratio, self.w_ratio = image.shape[0]/self.cfg.img_h, image.shape[1]/self.cfg.img_w
 		img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
