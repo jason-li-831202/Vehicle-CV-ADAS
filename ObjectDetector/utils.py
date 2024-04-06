@@ -1,7 +1,9 @@
+import cv2
 import numpy as np
 from enum import Enum
 from numba import jit
 from typing import *
+from dataclasses import dataclass
 
 class CollisionType(Enum):
 	UNKNOWN = "Determined ..."
@@ -17,12 +19,85 @@ class ObjectModelType(Enum):
 	YOLOV7 = 3
 	YOLOV8 = 4
 	YOLOV9 = 5
-
+	EfficientDet = 6
+	
 def hex_to_rgb(value):
 	value = value.lstrip('#')
 	lv = len(value)
 	return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
+@dataclass
+class Scaler(object):
+	'''
+	All Shape format: Tuple[int, int] -> (H, W)
+	'''
+	target_size: Tuple[int, int]
+	keep_ratio: bool = True
+
+	_new_shape: Union[Tuple[int, int], None] = None
+	_old_shape: Union[Tuple[int, int], None] = None
+	_pad_shape: Union[Tuple[int, int], None] = None
+
+	def process_image(self, srcimg : cv2) :
+		padh, padw, newh, neww = 0, 0, self.target_size[0], self.target_size[1]
+		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
+			hw_scale = srcimg.shape[0] / srcimg.shape[1]
+			if hw_scale > 1:
+				newh, neww = self.target_size[0], int(self.target_size[1] / hw_scale)
+				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
+				padw = int((self.target_size[1] - neww) * 0.5)
+				canvas = cv2.copyMakeBorder(img, 0, 0, padw, self.target_size[1] - neww - padw, cv2.BORDER_CONSTANT,
+										 value=0)  # add border
+			else:
+				newh, neww = int(self.target_size[0] * hw_scale) + 1, self.target_size[1]
+				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
+				padh = int((self.target_size[0] - newh) * 0.5)
+				canvas = cv2.copyMakeBorder(img, padh, self.target_size[0] - newh - padh, 0, 0, cv2.BORDER_CONSTANT, value=0)
+		else:
+			canvas = cv2.resize(srcimg, (self.target_size[1], self.target_size[0]), interpolation=cv2.INTER_CUBIC)
+		
+		self._old_shape = (srcimg.shape[0], srcimg.shape[1])
+		self._new_shape = (newh, neww)
+		self._pad_shape = (padh, padw)	
+		return canvas	 
+
+	def get_scale_ratio(self): 
+		if (self._old_shape == self._new_shape == None) :
+			raise Exception("Please operate 'process_image' before conversion")
+		return self._old_shape[0] / self._new_shape[0],  self._old_shape[1] / self._new_shape[1]
+	
+	def convert_boxes_coordinate(self, boxes: list, in_format: str="xyxy", out_format: str="xywh") -> np.ndarray:
+		if not isinstance(boxes, np.ndarray):
+			boxes = np.array(boxes)
+
+		if (boxes.size > 0) :
+			ratioh, ratiow = self.get_scale_ratio()
+			padh, padw = self._pad_shape
+			boxes = np.vstack(boxes)
+			if (in_format == "xywh"):
+				boxes[:, 2:4] = boxes[:, 0:2] + boxes[:, 2:4]
+
+			# [x1, y1, x2, y2]
+			boxes[:, 0] = (boxes[:, 0] - padw) * ratiow
+			boxes[:, 1] = (boxes[:, 1] - padh) * ratioh
+			boxes[:, 2] = (boxes[:, 2] - padw) * ratiow
+			boxes[:, 3] = (boxes[:, 3] - padh) * ratioh
+
+			if (out_format == "xywh"):
+				boxes[:, 2:4] = boxes[:, 2:4] - boxes[:, 0:2]
+		return boxes
+
+	def convert_kpss_coordinate(self, kpss : list) -> np.ndarray:
+		if not isinstance(kpss, np.ndarray):
+			kpss = np.array(kpss)
+
+		if (kpss != []) :
+			ratioh, ratiow = self.get_scale_ratio()
+			padh, padw = self._pad_shape
+			kpss = np.vstack(kpss)
+			kpss[:, :, 0] = (kpss[:, :, 0] - padw) * ratiow
+			kpss[:, :, 1] = (kpss[:, :, 1] - padh) * ratioh
+		return kpss
 
 class NMS(object):
 	def __init__(self):

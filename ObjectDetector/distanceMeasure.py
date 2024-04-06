@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import typing  
+from ObjectDetector.core import RectInfo
 
 class SingleCamDistanceMeasure(object):
 	# 1 cm = 0.39 inch, original size h x w 
@@ -45,7 +46,7 @@ class SingleCamDistanceMeasure(object):
 			j=i
 		return c
 
-	def updateDistance(self, boxes: list) -> None :
+	def updateDistance(self, boxes: typing.List[RectInfo]) -> None :
 		"""
 		Update the distance of the target object through the size of pixels.
 
@@ -56,8 +57,10 @@ class SingleCamDistanceMeasure(object):
 		"""
 		self.distance_points = []
 		if ( len(boxes) != 0 )  :
-			for box, _ in boxes:
-				ymin, xmin, ymax, xmax, label = box
+			for box in boxes:
+				xmin, ymin, xmax, ymax = box.tolist()
+				label = box.label
+				
 				if label in self.object_list and  ymax <= 650:
 					point_x = (xmax + xmin) // 2
 					point_y = ymax

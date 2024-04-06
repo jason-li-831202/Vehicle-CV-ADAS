@@ -67,3 +67,6 @@ ObjectDetector/__pycache__/yoloDetector.cpython-37.pyc
 ObjectDetector/__pycache__/distanceMeasure.cpython-37.pyc
 __pycache__/core.cpython-37.pyc
 __pycache__/coreEngine.cpython-37.pyc
+ObjectDetector/models/efficientdet-d0-coco_fp32.onnx
+ObjectDetector/__pycache__/efficientdetDetector.cpython-37.pyc
+ObjectDetector/__pycache__/core.cpython-37.pyc

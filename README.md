@@ -11,7 +11,7 @@
 
 Example scripts for the detection of lanes using the [ultra fast lane detection v2](https://github.com/cfzd/Ultra-Fast-Lane-Detection-v2) model in ONNX/TensorRT.
 
-Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv7](https://github.com/WongKinYiu/yolov7)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9) model in ONNX/TensorRT.
+Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv7](https://github.com/WongKinYiu/yolov7)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9)/[EfficientDet](https://github.com/zylo117/Yet-Another-EfficientDet-Pytorch) model in ONNX/TensorRT.
 
 # ➤ Contents
 1) [Requirements](#Requirements)
@@ -101,7 +101,7 @@ Example scripts for the detection of objects using the [YOLOv5](https://github.c
    | Object          | `ObjectModelType.YOLOV7`         | Support yolov7 tiny/x/w/e/d model.                | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
    | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
-   
+   | Object          | `ObjectModelType.EfficientDet`   | Support efficientDet b0/b1/b2/b3 model.              | 
    * Run :
    
     ```

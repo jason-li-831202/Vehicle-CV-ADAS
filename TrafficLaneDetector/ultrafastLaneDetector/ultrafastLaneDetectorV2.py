@@ -4,12 +4,12 @@ from typing import Tuple
 try :
 	import sys
 	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors
-	from ultrafastLaneDetector.LaneDetector import LaneDetectBase
+	from TrafficLaneDetector.ultrafastLaneDetector.core import LaneDetectBase
 	sys.path.append("..")
 	from coreEngine import TensorRTEngine, OnnxEngine
 except :
 	from .utils import LaneModelType, OffsetType, lane_colors
-	from .LaneDetector import LaneDetectBase
+	from .core import LaneDetectBase
 	from coreEngine import TensorRTEngine, OnnxEngine
 
 def _softmax(x) :

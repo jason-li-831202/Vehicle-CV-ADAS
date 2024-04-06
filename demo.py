@@ -5,6 +5,7 @@ import pycuda.driver as drv
 
 from taskConditions import TaskConditions, Logger
 from ObjectDetector.yoloDetector import YoloDetector
+from ObjectDetector.efficientdetDetector import EfficientdetDetector
 from ObjectDetector.utils import ObjectModelType,  CollisionType
 from ObjectDetector.distanceMeasure import SingleCamDistanceMeasure
 
@@ -246,8 +247,12 @@ if __name__ == "__main__":
 
 	# object detection model
 	LOGGER.info("ObjectDetector Model Type : {}".format(object_config["model_type"].name))
-	YoloDetector.set_defaults(object_config)
-	objectDetector = YoloDetector(logger=LOGGER)
+	if ( ObjectModelType.EfficientDet == object_config["model_type"]):
+		EfficientdetDetector.set_defaults(object_config)
+		objectDetector = EfficientdetDetector(logger=LOGGER)
+	else :
+		YoloDetector.set_defaults(object_config)
+		objectDetector = YoloDetector(logger=LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
 
 	# display panel
