@@ -208,7 +208,7 @@ class UltrafastLaneDetectorV2(LaneDetectBase):
 				cv2.circle(overlay, (lane_point[0],lane_point[1]), 3, color, thickness=-1)
 		image[:] = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
 
-	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), alpha: float = 0.9) -> None :
+	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), alpha: float = 0.85) -> None :
 		H, W, _ = image.shape
 		# Draw a mask for the current lane
 		if(self.lane_info.area_status):
