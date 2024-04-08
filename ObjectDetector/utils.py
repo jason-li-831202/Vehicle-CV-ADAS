@@ -34,9 +34,9 @@ class Scaler(object):
 	target_size: Tuple[int, int]
 	keep_ratio: bool = True
 
-	_new_shape: Union[Tuple[int, int], None] = None
-	_old_shape: Union[Tuple[int, int], None] = None
-	_pad_shape: Union[Tuple[int, int], None] = None
+	_new_shape: Optional[Tuple[int, int]] = None
+	_old_shape: Optional[Tuple[int, int]] = None
+	_pad_shape: Optional[Tuple[int, int]] = None
 
 	def process_image(self, srcimg : cv2) :
 		padh, padw, newh, neww = 0, 0, self.target_size[0], self.target_size[1]

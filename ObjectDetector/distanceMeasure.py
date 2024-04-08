@@ -92,7 +92,7 @@ class SingleCamDistanceMeasure(object):
 	def DrawDetectedOnFrame(self, frame_show: cv2) -> None : 
 		if ( len(self.distance_points) != 0 )  :
 			for x, y, d in self.distance_points:
-				cv2.circle(frame_show, (x, y), 4, (0, 255 , 0), thickness=-1)
+				cv2.circle(frame_show, (x, y), 4, (255, 255 , 255), thickness=-1)
 
 				unit = 'm'
 				if d < 0:
@@ -100,19 +100,11 @@ class SingleCamDistanceMeasure(object):
 				else :
 					text = ' {:.2f} {}'.format(d, unit)
 				
-				if (d > 3) :
-					fontScale = 0.5
-				elif ( 1.5 < d <= 3) :
-					fontScale = 0.8
-				elif (d <= 1.5) :
-					fontScale = 1
-				else :
-					fontScale = 0.8
-      
+				fontScale = max(0.4, min(1, 1/d))
 				# get coords based on boundary
 				textsize = cv2.getTextSize(text, 0, fontScale=fontScale, thickness=3)[0]
 				textX = int((x- textsize[0]/2))
 				textY = int((y + textsize[1]))
 
-				cv2.putText(frame_show, text, (textX  + 1, textY + 5 ), cv2.FONT_HERSHEY_SCRIPT_COMPLEX, fontScale=fontScale,  
-							color=(0, 255 , 0), thickness=2)
+				cv2.putText(frame_show, text, (textX  + 1, textY + 5 ), fontFace=cv2.FONT_HERSHEY_TRIPLEX,  fontScale=fontScale,  
+							color=(255, 255 , 255), thickness=1)

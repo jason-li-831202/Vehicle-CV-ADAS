@@ -51,7 +51,7 @@ class EfficientdetDetector(ObjectDetectBase):
 		with open(classes_path) as f:
 			class_names = f.readlines()
 		self.class_names = [c.strip() for c in class_names]
-		get_colors = list(map(lambda i:"#" +"%06x" % random.randint(0, 0xFFFFFF),range(len(self.class_names)) ))
+		get_colors = list(map(lambda i: hex_to_rgb("#" +"%06x" % random.randint(0, 0xFFFFFF)), range(len(self.class_names)) ))
 		self.colors_dict = dict(zip(list(self.class_names), get_colors))
 
 	def __prepare_input(self, srcimg : cv2, mean: Tuple = (0.406, 0.456, 0.485), std: Tuple = (0.225, 0.224, 0.229)) -> Tuple[np.ndarray, Scaler] :
@@ -102,8 +102,8 @@ class EfficientdetDetector(ObjectDetectBase):
 				c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
 
 				if (label != 'unknown') :
-					cv2.rectangle(frame_show, c1, c2, hex_to_rgb(self.colors_dict[label]), -1, cv2.LINE_AA)
-					self.cornerRect(frame_show, _info.tolist(), colorR= hex_to_rgb(self.colors_dict[label]), colorC= hex_to_rgb(self.colors_dict[label]))
+					cv2.rectangle(frame_show, c1, c2, self.colors_dict[label], -1, cv2.LINE_AA)
+					self.cornerRect(frame_show, _info.tolist(), colorR=self.colors_dict[label], colorC=self.colors_dict[label])
 				else :
 					cv2.rectangle(frame_show, c1, c2, (0, 0, 0), -1, cv2.LINE_AA)
 					self.cornerRect(frame_show, _info.tolist(), colorR= (0, 0, 0), colorC= (0, 0, 0) )

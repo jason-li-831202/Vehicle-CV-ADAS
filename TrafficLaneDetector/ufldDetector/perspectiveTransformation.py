@@ -3,9 +3,9 @@ import logging
 import numpy as np
 from typing import *
 try :
-    from ultrafastLaneDetector.utils import  lane_colors, OffsetType
+    from ufldDetector.utils import  lane_colors, OffsetType
 except :
-    from ..ultrafastLaneDetector.utils import lane_colors, OffsetType
+    from ..ufldDetector.utils import lane_colors, OffsetType
 
 class PerspectiveTransformation(object):
     """ This a class for transforming image between frontal view and bird view

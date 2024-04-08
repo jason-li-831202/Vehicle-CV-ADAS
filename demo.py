@@ -3,19 +3,18 @@ import numpy as np
 import logging
 import pycuda.driver as drv
 
+from ObjectTracker import BYTETracker
 from taskConditions import TaskConditions, Logger
-from ObjectDetector.yoloDetector import YoloDetector
-from ObjectDetector.efficientdetDetector import EfficientdetDetector
+from ObjectDetector import YoloDetector, EfficientdetDetector
 from ObjectDetector.utils import ObjectModelType,  CollisionType
 from ObjectDetector.distanceMeasure import SingleCamDistanceMeasure
 
-from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetector import UltrafastLaneDetector
-from TrafficLaneDetector.ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
-from TrafficLaneDetector.ultrafastLaneDetector.perspectiveTransformation import PerspectiveTransformation
-from TrafficLaneDetector.ultrafastLaneDetector.utils import LaneModelType, OffsetType, CurvatureType
+from TrafficLaneDetector import UltrafastLaneDetector, UltrafastLaneDetectorV2
+from TrafficLaneDetector.ufldDetector.perspectiveTransformation import PerspectiveTransformation
+from TrafficLaneDetector.ufldDetector.utils import LaneModelType, OffsetType, CurvatureType
 LOGGER = Logger(None, logging.INFO, logging.INFO )
 
-video_path = "./TrafficLaneDetector/temp/demo-4.mp4"
+video_path = "./TrafficLaneDetector/temp/demo-7.mp4"
 lane_config = {
 	"model_path": "./TrafficLaneDetector/models/culane_res18_fp16.trt",
 	"model_type" : LaneModelType.UFLDV2_CULANE
@@ -254,6 +253,7 @@ if __name__ == "__main__":
 		YoloDetector.set_defaults(object_config)
 		objectDetector = YoloDetector(logger=LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
+	objectTracker = BYTETracker(mot20=True, names=objectDetector.colors_dict)
 
 	# display panel
 	displayPanel = ControlPanel()
@@ -268,6 +268,14 @@ if __name__ == "__main__":
 			obect_time = time.time()
 			objectDetector.DetectFrame(frame)
 			obect_infer_time = round(time.time() - obect_time, 2)
+
+			if objectTracker :
+				box   = [obj.tolist(format_type= "xyxy") for obj in objectDetector.object_info]
+				score = [obj.conf for obj in objectDetector.object_info]
+				id    = [obj.label for  obj in objectDetector.object_info]
+				# id    = [objectDetector.class_names.index(obj.label) for  obj in objectDetector.object_info]
+				objectTracker.update(box, score, id, frame)
+
 			lane_time = time.time()
 			laneDetector.DetectFrame(frame)
 			lane_infer_time = round(time.time() - lane_time, 4)
@@ -293,6 +301,7 @@ if __name__ == "__main__":
 			laneDetector.DrawDetectedOnFrame(frame_show, analyzeMsg.offset_msg)
 			laneDetector.DrawAreaOnFrame(frame_show, displayPanel.CollisionDict[analyzeMsg.collision_msg])
 			objectDetector.DrawDetectedOnFrame(frame_show)
+			objectTracker.DrawTrackedOnFrame(frame_show, False)
 			distanceDetector.DrawDetectedOnFrame(frame_show)
 
 			displayPanel.DisplayBirdViewPanel(frame_show, birdview_show)

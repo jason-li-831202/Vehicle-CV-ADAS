@@ -11,8 +11,8 @@ try :
 	sys.path.append("..")
 	from coreEngine import TensorRTEngine, OnnxEngine
 except :
-	from ObjectDetector.utils import ObjectModelType, hex_to_rgb, NMS, Scaler
-	from ObjectDetector.core import ObjectDetectBase, RectInfo
+	from .utils import ObjectModelType, hex_to_rgb, NMS, Scaler
+	from .core import ObjectDetectBase, RectInfo
 	from coreEngine import TensorRTEngine, OnnxEngine
 
 class YoloLiteParameters():
@@ -90,7 +90,7 @@ class YoloDetector(ObjectDetectBase, YoloLiteParameters):
 		with open(classes_path) as f:
 			class_names = f.readlines()
 		self.class_names = [c.strip() for c in class_names]
-		get_colors = list(map(lambda i:"#" +"%06x" % random.randint(0, 0xFFFFFF),range(len(self.class_names)) ))
+		get_colors = list(map(lambda i: hex_to_rgb("#" +"%06x" % random.randint(0, 0xFFFFFF)), range(len(self.class_names)) ))
 		self.colors_dict = dict(zip(list(self.class_names), get_colors))
 
 	def __prepare_input(self, srcimg : cv2) -> Tuple[np.ndarray, Scaler] :
@@ -183,12 +183,12 @@ class YoloDetector(ObjectDetectBase, YoloLiteParameters):
 				c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
 
 				if (label != 'unknown') :
-					cv2.rectangle(frame_show, c1, c2, hex_to_rgb(self.colors_dict[label]), -1, cv2.LINE_AA)
-					self.cornerRect(frame_show, _info.tolist(), colorR= hex_to_rgb(self.colors_dict[label]), colorC= hex_to_rgb(self.colors_dict[label]))
+					cv2.rectangle(frame_show, c1, c2, self.colors_dict[label], -1, cv2.LINE_AA)
+					self.cornerRect(frame_show, _info.tolist(), colorR=self.colors_dict[label], colorC=self.colors_dict[label])
 				else :
 					cv2.rectangle(frame_show, c1, c2, (0, 0, 0), -1, cv2.LINE_AA)
 					self.cornerRect(frame_show, _info.tolist(), colorR= (0, 0, 0), colorC= (0, 0, 0) )
-				cv2.putText(frame_show, label, (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, tl / 3, (255, 255, 255), 2)
+				cv2.putText(frame_show, label, (xmin + 2, ymin - 7), cv2.FONT_HERSHEY_TRIPLEX, tl / 4, (255, 255, 255), 2)
 		
 
 if __name__ == "__main__":

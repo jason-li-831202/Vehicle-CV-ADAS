@@ -3,14 +3,14 @@ import cv2
 import numpy as np
 from typing import Tuple
 try :
-	import sys
-	from ultrafastLaneDetector.utils import LaneModelType, OffsetType, lane_colors
-	from TrafficLaneDetector.ultrafastLaneDetector.core import LaneDetectBase
-	sys.path.append("..")
+	from ufldDetector.utils import LaneModelType, OffsetType, lane_colors
+	from TrafficLaneDetector.ufldDetector.core import LaneDetectBase
 	from coreEngine import TensorRTEngine, OnnxEngine
 except :
+	import sys
 	from .utils import LaneModelType, OffsetType, lane_colors
 	from .core import LaneDetectBase
+	sys.path.append("..")
 	from coreEngine import TensorRTEngine, OnnxEngine
 
 class ModelConfig():
@@ -148,9 +148,10 @@ class UltrafastLaneDetector(LaneDetectBase):
 		self._LaneDetectBase__update_lanes_status(self.lane_info.lanes_status)
 		self._LaneDetectBase__update_lanes_area(self.lane_info.lanes_points, self.img_height)
 		
-	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN) -> None:
-		for lane_num, lane_points in enumerate(self.lane_info.lanes_points):
-
+	def DrawDetectedOnFrame(self, image : cv2, type : OffsetType = OffsetType.UNKNOWN, alpha: float = 0.3) -> None:
+		overlay = image.copy()
+		for lane_num,lane_points in enumerate(self.lane_info.lanes_points):
+			
 			if ( lane_num==1 and type == OffsetType.RIGHT) :
 				color = (0, 0, 255)
 			elif (lane_num==2 and type == OffsetType.LEFT) :
@@ -159,16 +160,17 @@ class UltrafastLaneDetector(LaneDetectBase):
 				color = lane_colors[lane_num]
 
 			for lane_point in lane_points:
-				cv2.circle(image, (lane_point[0], lane_point[1]), 3, color, -1)
+				cv2.circle(overlay, (lane_point[0],lane_point[1]), 3, color, thickness=-1)
+		image[:] = cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
 
-	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0)) -> None :
+	def DrawAreaOnFrame(self, image : cv2, color : tuple = (255,191,0), alpha: float = 0.9) -> None :
 		H, W, _ = image.shape
 		# Draw a mask for the current lane
 		if(self.lane_info.area_status):
 			lane_segment_img = image.copy()
 
 			cv2.fillPoly(lane_segment_img, pts = [self.lane_info.area_points], color =color)
-			image[:H,:W,:] = cv2.addWeighted(image, 0.7, lane_segment_img, 0.1, 0)
+			image[:H,:W,:] = cv2.addWeighted(image, alpha, lane_segment_img, 1-alpha, 0)
 
 
 

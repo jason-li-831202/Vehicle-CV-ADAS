@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
-from ultrafastLaneDetector.utils import LaneModelType
-from ultrafastLaneDetector.ultrafastLaneDetector import UltrafastLaneDetector
-from ultrafastLaneDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
+from ufldDetector.utils import LaneModelType
+from ufldDetector.ultrafastLaneDetector import UltrafastLaneDetector
+from ufldDetector.ultrafastLaneDetectorV2 import UltrafastLaneDetectorV2
 
 
 image_path = "./temp/test3.jpg"

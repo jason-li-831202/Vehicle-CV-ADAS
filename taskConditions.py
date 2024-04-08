@@ -3,13 +3,38 @@ import numpy as np
 import logging
 import ctypes
 from ObjectDetector.utils import CollisionType
-from TrafficLaneDetector.ultrafastLaneDetector.utils import OffsetType, CurvatureType
+from TrafficLaneDetector.ufldDetector.utils import OffsetType, CurvatureType
 
 STD_OUTPUT_HANDLE= -11
 std_out_handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
 def set_color(color, handle=std_out_handle):
 	bool = ctypes.windll.kernel32.SetConsoleTextAttribute(handle, color)
 	return bool
+
+class LimitedList(list):
+	def __init__(self, maxlen):
+		super().__init__()
+		self._maxlen = maxlen
+		self._is_full = False
+
+	def full(self):
+		return self._is_full
+	
+	def append(self, element):
+		self.__delitem__(slice(0, len(self) == self._maxlen))
+		super(LimitedList, self).append(element)
+		if len(self) < self._maxlen:
+			self._is_full = False
+		else :
+			self._is_full = True
+			
+	def extend(self, elements):
+		for element in elements:
+			self.append(element)
+			
+	def clear(self):
+		super(LimitedList, self).__init__()
+		self._is_full = False
 
 class Logger:
 	FOREGROUND_WHITE = 0x0007
@@ -66,9 +91,9 @@ class TaskConditions(object):
 		self.collision_msg = CollisionType.UNKNOWN
 		self.offset_msg = OffsetType.UNKNOWN
 		self.curvature_msg = CurvatureType.UNKNOWN
-		self.vehicle_collision_record = []
-		self.vehicle_offset_record = []
-		self.vehicle_curvature_record = []
+		self.vehicle_collision_record = LimitedList(5)
+		self.vehicle_offset_record = LimitedList(5)
+		self.vehicle_curvature_record = LimitedList(10)
 		self.transform_status = None
 
 		self.toggle_status = "Default"
@@ -186,8 +211,7 @@ class TaskConditions(object):
 
 		if (vehicle_offset != None) :
 			self.vehicle_offset_record.append(vehicle_offset)
-			if len(self.vehicle_offset_record) > 5:
-				self.vehicle_offset_record.pop(0)
+			if self.vehicle_offset_record.full():
 				avg_vehicle_offset = np.median(self.vehicle_offset_record)
 				self.offset_msg = self._calc_deviation(avg_vehicle_offset, offset_thres)
 
@@ -212,7 +236,7 @@ class TaskConditions(object):
 				self.offset_msg = OffsetType.UNKNOWN
 		else :
 			self.offset_msg = OffsetType.UNKNOWN
-			self.vehicle_offset_record = []
+			self.vehicle_offset_record.clear()
 
 	def UpdateRouteStatus(self, vehicle_direction, vehicle_curvature, curvae_thres=500) :
 		"""
@@ -231,8 +255,7 @@ class TaskConditions(object):
 			if (vehicle_direction != None and self.offset_msg == OffsetType.CENTER) :
 				self.vehicle_curvature_record.append([vehicle_direction, vehicle_curvature])
 
-				if len(self.vehicle_curvature_record) > 10:
-					self.vehicle_curvature_record.pop(0)
+				if self.vehicle_curvature_record.full():
 					avg_direction = max(set(np.squeeze(self.vehicle_curvature_record)[:,0]), key = self.vehicle_curvature_record.count)
 					avg_curvature = np.median([int(float(i)) for i in np.array(self.vehicle_curvature_record)[:, 1]])
 					self.curvature_msg = self._calc_direction(avg_curvature, avg_direction, curvae_thres)
@@ -248,13 +271,13 @@ class TaskConditions(object):
 				else :
 					self.curvature_msg = CurvatureType.UNKNOWN
 			else :
-				self.vehicle_curvature_record = []
+				self.vehicle_curvature_record.clear()
 				self.curvature_msg = CurvatureType.UNKNOWN
 
 			self._calibration_curve(vehicle_curvature)
 
 		else :
-			self.vehicle_curvature_record = []
+			self.vehicle_curvature_record.clear()
 			self.curvature_msg = CurvatureType.UNKNOWN
 
 	def UpdateCollisionStatus(self, vehicle_distance, lane_area, distance_thres=1.5) : 
@@ -273,8 +296,7 @@ class TaskConditions(object):
 		if (vehicle_distance != None) :
 			x, y, d = vehicle_distance
 			self.vehicle_collision_record.append(d)
-			if len(self.vehicle_collision_record) > 5:
-				self.vehicle_collision_record.pop(0)
+			if self.vehicle_collision_record.full():
 				avg_vehicle_collision = np.median(self.vehicle_collision_record)
 				if ( avg_vehicle_collision <= distance_thres) :
 					self.collision_msg = CollisionType.WARNING
@@ -287,4 +309,4 @@ class TaskConditions(object):
 				self.collision_msg = CollisionType.NORMAL
 			else :
 				self.collision_msg = CollisionType.UNKNOWN
-			self.vehicle_collision_record = []
+			self.vehicle_collision_record.clear()
