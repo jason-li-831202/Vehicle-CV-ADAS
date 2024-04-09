@@ -253,7 +253,7 @@ if __name__ == "__main__":
 		YoloDetector.set_defaults(object_config)
 		objectDetector = YoloDetector(logger=LOGGER)
 	distanceDetector = SingleCamDistanceMeasure()
-	objectTracker = BYTETracker(mot20=True, names=objectDetector.colors_dict)
+	objectTracker = BYTETracker(names=objectDetector.colors_dict)
 
 	# display panel
 	displayPanel = ControlPanel()

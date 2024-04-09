@@ -3,18 +3,34 @@ from typing import Any, Dict, List
 import numpy as np
 
 from . import matching
-from .dtypes import STrack, KalmanFilter, TrackState
+from .dtypes import BaseTrack, STrack, KalmanFilter, TrackState
 from .utils import joint_stracks, sub_stracks, remove_duplicate_stracks
 from ..core import ObjectTrackBase
 
 
 class BYTETracker(ObjectTrackBase):
+    """
+    Initialize the ByteTrack object.
 
+    Parameters:
+        track_thresh (float, optional): Detection confidence threshold
+            for track activation. Increasing track_thresh improves accuracy
+            and stability but might miss true detections. Decreasing it increases
+            completeness but risks introducing noise and instability.
+        track_buffer (int, optional): Number of frames to buffer when a track is lost.
+            Increasing track_buffer enhances occlusion handling, significantly
+            reducing the likelihood of track fragmentation or disappearance caused
+            by brief detection gaps.
+        match_thresh (float, optional): Threshold for matching tracks with detections.
+            Increasing match_thresh improves accuracy but risks fragmentation.
+            Decreasing it improves completeness but risks false positives and drift.
+        frame_rate (int, optional): The frame rate of the video.
+        min_box_area (int, optional): Limit the minimum detection size when drawing trajectories.
+    """  
     def __init__(self,
                  track_thresh: float = 0.5,
                  track_buffer: int = 30,
                  match_thresh: float = 0.8,
-                 mot20: bool = False,
                  frame_rate: int = 30,
                  min_box_area: int = 10,
                  **kwargs: Any):
@@ -24,19 +40,25 @@ class BYTETracker(ObjectTrackBase):
         self.lost_stracks: List[STrack] = []
         self.removed_stracks: List[STrack] = []
 
-        self.frame_id = 0
-
-        self.det_thresh = track_thresh + 0.1
         self.track_thresh = track_thresh
         self.match_thresh = match_thresh
         self.min_box_area = min_box_area
 
-        self.mot20 = mot20
-        self.track_buffer = track_buffer
-        self.buffer_size = int(frame_rate / 30.0 * self.track_buffer)
+        self.frame_id = 0
+        self.det_thresh = track_thresh + 0.1
+        self.buffer_size = int(frame_rate / 30.0 * track_buffer)
         self.max_time_lost = self.buffer_size
         self.kalman_filter = KalmanFilter()
 
+    def _get_tracker_messages(self, status=TrackState.Tracked) -> List[Dict[str, Any]]:
+        if (status == TrackState.Lost):
+            stracks = self.lost_stracks
+        elif (status == TrackState.Removed):
+            stracks = self.removed_stracks
+        else :
+            stracks = self.tracked_stracks
+        return [t.get_track_message() for t in stracks]
+    
     def update(self, bboxes, scores, class_ids, frame: np.ndarray):
         self.frame_id += 1
         activated_stracks = []
@@ -81,8 +103,8 @@ class BYTETracker(ObjectTrackBase):
         # Predict the current location with KF
         STrack.multi_predict(strack_pool)
         dists = matching.iou_distance(strack_pool, detections)
-        if not self.mot20:
-            dists = matching.fuse_score(dists, detections)
+        
+        dists = matching.fuse_score(dists, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=self.match_thresh)
 
         for itracked, idet in matches:
@@ -125,8 +147,8 @@ class BYTETracker(ObjectTrackBase):
         '''Deal with unconfirmed tracks, usually tracks with only one beginning frame'''
         detections = [detections[i] for i in u_detection]
         dists = matching.iou_distance(unconfirmed, detections)
-        if not self.mot20:
-            dists = matching.fuse_score(dists, detections)
+        
+        dists = matching.fuse_score(dists, detections)
         matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
         for itracked, idet in matches:
             unconfirmed[itracked].update(detections[idet], self.frame_id)
@@ -162,16 +184,21 @@ class BYTETracker(ObjectTrackBase):
  
         return self._get_tracker_messages()
 
-    def _get_tracker_messages(self, status=TrackState.Tracked) -> List[Dict[str, Any]]:
-        if (status == TrackState.Lost):
-            stracks = self.lost_stracks
-        elif (status == TrackState.Removed):
-            stracks = self.removed_stracks
-        else :
-            stracks = self.tracked_stracks
-        return [t.get_track_message() for t in stracks]
+    def reset(self):
+        """
+        Resets the internal state of the ByteTrack tracker.
 
-    
+        This method clears the tracking data, including tracked, lost,
+        and removed tracks, as well as resetting the frame counter. It's
+        particularly useful when processing multiple videos sequentially,
+        ensuring the tracker starts with a clean state for each new video.
+        """
+        self.frame_id = 0
+        self.tracked_stracks: List[STrack] = []
+        self.lost_stracks: List[STrack] = []
+        self.removed_stracks: List[STrack] = []
+        BaseTrack.reset_counter()
+
     def DrawTrackedOnFrame(self, frame: np.ndarray, show_box: bool = True, show_traject: bool = True) -> None:
         online_targets = [track for track in self.tracked_stracks if track.is_activated]
         for t in online_targets:

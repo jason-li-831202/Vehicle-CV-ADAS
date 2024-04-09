@@ -80,7 +80,6 @@ class ObjectTrackBase(metaclass=ABCMeta):
                         thickness = 2,
                         color = self.class_colors[class_id])
 
-    
     def plot_bbox(self, img: np.ndarray, observations: np.ndarray, class_id: int, track_id: int) -> None:
         if (len(observations ) > 1 ):
             tx1, ty1, tw, th = observations.astype(int)

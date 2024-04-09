@@ -34,6 +34,14 @@ class BaseTrack(object):
     def next_id():
         BaseTrack._count += 1
         return BaseTrack._count
+    
+    @staticmethod
+    def reset_counter():
+        BaseTrack._count = 0
+        BaseTrack.track_id = 0
+        BaseTrack.start_frame = 0
+        BaseTrack.frame_id = 0
+        BaseTrack.time_since_update = 0
 
     def activate(self, *args):
         raise NotImplementedError
