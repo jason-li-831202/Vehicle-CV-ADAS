@@ -85,7 +85,9 @@ class SingleCamDistanceMeasure(object):
 		if ( len(self.distance_points) != 0 and len(poly) )  :
 			sorted_distance_points = sorted(self.distance_points, key=lambda arr: arr[2])
 			for x, y, d in sorted_distance_points:
-				if (self.__isInsidePolygon( (x, y), np.squeeze(poly) )) :
+				status =  True if cv2.pointPolygonTest(poly,((x, y)) , False ) >= 0 else False
+				# status = self.__isInsidePolygon( (x, y), np.squeeze(poly) ) # also can use it.
+				if (status) :
 					return [x, y, d]
 		return None
 
