@@ -173,7 +173,7 @@ class YoloDetector(ObjectDetectBase, YoloLiteParameters):
 			for _info in self._object_info:
 				xmin, ymin, xmax, ymax = _info.tolist()
 				label = _info.label
-
+				
 				if (len(_info.kpss) != 0) :
 					for kp in _info.kpss :
 						cv2.circle(frame_show,  kp, 1, (255, 255, 255), thickness=-1)

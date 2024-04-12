@@ -205,7 +205,12 @@ class BYTETracker(ObjectTrackBase):
             tlwh = t.tlwh
             tid = t.track_id
             cid = t.class_id
-            trajector = t.trajectories
+            t.filter_trajectories(frame, (10, 10))
+            trajector = t.trajectories 
+
             if tlwh[2] * tlwh[3] > self.min_box_area:
                 if show_box: self.plot_bbox(frame, tlwh, cid, tid)
-                if show_traject: self.plot_trajectories(frame, trajector, cid, tid)
+                if show_traject: 
+                    self.plot_trajectories(frame, trajector, cid, tid)
+                    self.plot_directions(frame, t.xyah, trajector, cid)
+

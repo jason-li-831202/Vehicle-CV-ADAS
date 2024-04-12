@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import typing  
 from ObjectDetector.core import RectInfo
+from ObjectTracker.core import putText_shadow
 
 class SingleCamDistanceMeasure(object):
 	# 1 cm = 0.39 inch, original size h x w 
@@ -108,5 +109,11 @@ class SingleCamDistanceMeasure(object):
 				textX = int((x- textsize[0]/2))
 				textY = int((y + textsize[1]))
 
-				cv2.putText(frame_show, text, (textX  + 1, textY + 5 ), fontFace=cv2.FONT_HERSHEY_TRIPLEX,  fontScale=fontScale,  
-							color=(255, 255 , 255), thickness=1)
+				# cv2.putText(frame_show, text, (textX  + 1, textY + 5 ), fontFace=cv2.FONT_HERSHEY_TRIPLEX,  fontScale=fontScale,  
+				# 			color=(255, 255 , 255), thickness=1)
+				putText_shadow(frame_show, text, (textX  + 1, textY + 5 ), fontFace=cv2.FONT_HERSHEY_TRIPLEX,  fontScale=fontScale,  
+				 			color=(255, 255 , 255), thickness=1, shadow_color=(150, 150, 150))
+
+
+
+    
