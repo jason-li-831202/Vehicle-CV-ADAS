@@ -36,7 +36,7 @@ def putText_shadow(img, text, org, fontFace, fontScale, color, thickness=1, shad
     # Draw the actual text
     cv2.putText(img, text, org, fontFace, fontScale, color, thickness=thickness)
 
-def arrowedLine_shadow(img, start, end, color, thickness=3, tipLength=0.3, shadow_color=(150, 150, 150), shadow_offset=2):
+def arrowedLine_shadow(img, start, end, color, thickness=3, tipLength=0.3, shadow_color=(100, 100, 100), shadow_offset=2):
     """
     Draws an arrowed line with a shadow effect on the image.
 
@@ -55,9 +55,9 @@ def arrowedLine_shadow(img, start, end, color, thickness=3, tipLength=0.3, shado
     """
     # Calculate the shadow endpoint
     shadow_end = (end[0] - shadow_offset, end[1] + shadow_offset)
-    shadow_start = (start[0], start[1] + shadow_offset)
+    shadow_start = (start[0]- shadow_offset, start[1] + shadow_offset)
     # Draw the shadow arrow
-    cv2.arrowedLine(img, shadow_start, shadow_end, shadow_color, thickness=thickness+2, tipLength=tipLength-0.1)
+    cv2.arrowedLine(img, shadow_start, shadow_end, shadow_color, thickness=thickness+2, tipLength=tipLength)
 
     # Draw a smaller arrow on top to simulate the shadow
     shadow_arrow_end = (end[0] - shadow_offset // 2, end[1] - shadow_offset // 2)
@@ -65,7 +65,6 @@ def arrowedLine_shadow(img, start, end, color, thickness=3, tipLength=0.3, shado
 
     cv2.arrowedLine(img, start, end, color, thickness=thickness, tipLength=tipLength)
 
-# ObjectDetectBase
 class ObjectTrackBase(metaclass=ABCMeta):
     """ Object tracking base class.
 
@@ -188,13 +187,12 @@ class ObjectTrackBase(metaclass=ABCMeta):
         if (len(observations ) > 1 ):
             for i, box in enumerate(observations):
                 cx, ey = int((box[0] + box[2]) / 2), int(box[3]) # int((box[1] + box[3]) / 2)
-                thickness = int(np.sqrt(float (i + 1)) * 1.2)
                 cv2.circle(
                     img,
                     (cx, ey), 
-                    2,
+                    int(np.sqrt(float (i + 1)) * 0.5),
                     color=self.class_colors[class_id],
-                    thickness=thickness
+                    thickness=int(np.sqrt(float (i + 1)) * 1.2)
                 )
 
             foontSize = min(1, sum(box[2:]) * FONT_SCALE)
