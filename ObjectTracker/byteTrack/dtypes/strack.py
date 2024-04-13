@@ -142,12 +142,11 @@ class STrack(BaseTrack):
 		crop = frame[y1:y2, x1:x2, :].copy()
 		self.crops.append(crop)
 
-	def filter_trajectories(self, frame: np.ndarray, pad: tuple = (0, 0)) -> None:
+	def filter_trajectories(self, frame: np.ndarray, pad: tuple = (0, 0)) -> list:
 		padh, padw = pad
 		temp_trajectories = self.trajectories.copy()
-		self.trajectories.clear()
-		self.trajectories.extend([bbox for bbox in temp_trajectories if bbox[0] >= 0+padw and bbox[1] >= 0+padh and 
-														bbox[2] <= frame.shape[1]-padw and bbox[3] <= frame.shape[0]-padh])
+		return [bbox for bbox in temp_trajectories if bbox[0] >= 0+padw and bbox[1] >= 0+padh and 
+														bbox[2] <= frame.shape[1]-padw and bbox[3] <= frame.shape[0]-padh]
 
 	@property
 	# @jit(nopython=True)
