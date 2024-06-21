@@ -1,7 +1,8 @@
 addict
 numba
+lap
 scipy
-pycuda
+pycuda==2021.1
 torchsummary
 onnx==1.12.0
 onnxruntime==1.12.0
