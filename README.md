@@ -11,7 +11,7 @@
 
 Example scripts for the detection of lanes using the [ultra fast lane detection v2](https://github.com/cfzd/Ultra-Fast-Lane-Detection-v2) model in ONNX/TensorRT.
 
-Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv7](https://github.com/WongKinYiu/yolov7)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9)/[EfficientDet](https://github.com/zylo117/Yet-Another-EfficientDet-Pytorch) model in ONNX/TensorRT.
+Example scripts for the detection of objects using the [YOLOv5](https://github.com/ultralytics/yolov5)/[YOLOv5-lite](https://github.com/ppogg/YOLOv5-Lite)/[YOLOv6](https://github.com/meituan/YOLOv6)/[YOLOv7](https://github.com/WongKinYiu/yolov7)/[YOLOv8](https://github.com/ultralytics/ultralytics)/[YOLOv9](https://github.com/WongKinYiu/yolov9)/[YOLOv10](https://github.com/ultralytics/ultralytics)/[EfficientDet](https://github.com/zylo117/Yet-Another-EfficientDet-Pytorch) model in ONNX/TensorRT.
 
 Add [ByteTrack](https://github.com/ifzhang/ByteTrack) to determine the driving direction of ID vehicles and perform trajectory tracking.
 
@@ -55,6 +55,7 @@ Add [ByteTrack](https://github.com/ifzhang/ByteTrack) to determine the driving d
     | YOLOv7          | `v0.1`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1arGcVT32Sm3zxhql2jgAa5xIEZdsDq9D?usp=sharing)  |
     | YOLOv8          | `8.1.27`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1mrhgTaZFQWWwhf0jcMwD_tOjmXfMh3pS?usp=sharing)  |
     | YOLOv9          | `v0.1`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12oFXgco3CARzhU8CiLCpf_6oBA3sAvPT?usp=sharing) |
+    | YOLOv10          | `8.2.41`  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1RqkZj6u0iwZknGt_VI4J4h93gNzwF94P?usp=sharing) |
 
 
  * ***Convert Onnx to TenserRT model*** :
@@ -102,8 +103,10 @@ Add [ByteTrack](https://github.com/ifzhang/ByteTrack) to determine the driving d
    | Object          | `ObjectModelType.YOLOV6`         | Support yolov6n/s/m/l, yolov6lite-s/m/l model.    | 
    | Object          | `ObjectModelType.YOLOV7`         | Support yolov7 tiny/x/w/e/d model.                | 
    | Object          | `ObjectModelType.YOLOV8`         | Support yolov8n/s/m/l/x model.                    | 
-   | Object          | `ObjectModelType.YOLOV9`         | Support yolov9s/m/c/e model.                      | 
-   | Object          | `ObjectModelType.EfficientDet`   | Support efficientDet b0/b1/b2/b3 model.              | 
+   | Object          | `ObjectModelType.YOLOV9`         | Support yolov9t/s/m/c/e model.                    | 
+   | Object          | `ObjectModelType.YOLOV10`        | Support yolov10n/s/m/b/l/x model.                 | 
+   | Object          | `ObjectModelType.EfficientDet`   | Support efficientDet b0/b1/b2/b3 model.           | 
+
    * Run :
    
     ```

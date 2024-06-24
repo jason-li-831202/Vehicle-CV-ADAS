@@ -21,8 +21,8 @@ lane_config = {
 }
 
 object_config = {
-	"model_path": './ObjectDetector/models/yolov9c-coco_fp16.trt',
-	"model_type" : ObjectModelType.YOLOV9,
+	"model_path": './ObjectDetector/models/yolov10n-coco_fp16.trt',
+	"model_type" : ObjectModelType.YOLOV10,
 	"classes_path" : './ObjectDetector/models/coco_label.txt',
 	"box_score" : 0.4,
 	"box_nms_iou" : 0.5

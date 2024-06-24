@@ -111,14 +111,14 @@ class YoloDetector(ObjectDetectBase, YoloLiteParameters):
 		YOLOv5/6/7 outputs shape -> (-1, obj_conf + 5[bbox, cls_conf])
 		YOLOv8/9 outputs shape -> (obj_conf + 4[bbox], -1)
 		'''
-		if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
+		if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9, ObjectModelType.YOLOV10]) :
 			output = output.T
 		
 		output = self.lite_postprocess(output)
 
 		# inference output
 		for detection in output:
-			if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9]) :
+			if (self.model_type in [ObjectModelType.YOLOV8, ObjectModelType.YOLOV9, ObjectModelType.YOLOV10]) :
 				obj_cls_probs = detection[4:]
 			else :
 				obj_cls_probs = detection[5:] * detection[4] # cls_conf * obj_conf 
