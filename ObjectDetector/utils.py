@@ -39,24 +39,24 @@ class Scaler(object):
 	_old_shape: Optional[Tuple[int, int]] = None
 	_pad_shape: Optional[Tuple[int, int]] = None
 
-	def process_image(self, srcimg : cv2) :
+	def process_image(self, srcimg : np.ndarray) -> np.ndarray:
 		padh, padw, newh, neww = 0, 0, self.target_size[0], self.target_size[1]
+
 		if self.keep_ratio and srcimg.shape[0] != srcimg.shape[1]:
 			hw_scale = srcimg.shape[0] / srcimg.shape[1]
 			if hw_scale > 1:
-				newh, neww = self.target_size[0], int(self.target_size[1] / hw_scale)
-				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
+				newh, neww = self.target_size[0], int(self.target_size[1] / hw_scale)	
 				padw = int((self.target_size[1] - neww) * 0.5)
-				canvas = cv2.copyMakeBorder(img, 0, 0, padw, self.target_size[1] - neww - padw, cv2.BORDER_CONSTANT,
-										 value=0)  # add border
 			else:
 				newh, neww = int(self.target_size[0] * hw_scale) + 1, self.target_size[1]
-				img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_CUBIC)
 				padh = int((self.target_size[0] - newh) * 0.5)
-				canvas = cv2.copyMakeBorder(img, padh, self.target_size[0] - newh - padh, 0, 0, cv2.BORDER_CONSTANT, value=0)
+			img = cv2.resize(srcimg, (neww, newh), interpolation=cv2.INTER_LINEAR)
+			canvas = np.full((self.target_size[0], self.target_size[1], 3), 114, dtype=np.uint8)
+			canvas[padh:(padh + newh), padw:(padw + neww), :] = img
+
 		else:
-			canvas = cv2.resize(srcimg, (self.target_size[1], self.target_size[0]), interpolation=cv2.INTER_CUBIC)
-		
+			canvas = cv2.resize(srcimg, (self.target_size[1], self.target_size[0]), interpolation=cv2.INTER_LINEAR)
+
 		self._old_shape = (srcimg.shape[0], srcimg.shape[1])
 		self._new_shape = (newh, neww)
 		self._pad_shape = (padh, padw)	
@@ -79,10 +79,8 @@ class Scaler(object):
 				boxes[:, 2:4] = boxes[:, 0:2] + boxes[:, 2:4]
 
 			# [x1, y1, x2, y2]
-			boxes[:, 0] = (boxes[:, 0] - padw) * ratiow
-			boxes[:, 1] = (boxes[:, 1] - padh) * ratioh
-			boxes[:, 2] = (boxes[:, 2] - padw) * ratiow
-			boxes[:, 3] = (boxes[:, 3] - padh) * ratioh
+			boxes[..., [0, 2]] = (boxes[..., [0, 2]] - padw) * ratiow
+			boxes[..., [1, 3]] = (boxes[..., [1, 3]] - padh) * ratioh
 
 			if (out_format == "xywh"):
 				boxes[:, 2:4] = boxes[:, 2:4] - boxes[:, 0:2]

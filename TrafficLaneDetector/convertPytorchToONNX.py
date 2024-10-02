@@ -4,10 +4,10 @@ import onnx
 # from torchsummary import summary
 from io import BytesIO
 
-from ultrafastLaneDetector.utils import LaneModelType
-from ultrafastLaneDetector.exportLib.ultrafastLane.model import parsingNet
-from ultrafastLaneDetector.exportLib.ultrafastLaneV2.configs.config import Config
-from ultrafastLaneDetector.exportLib.ultrafastLaneV2 import model_tusimple, model_curvelanes
+from ufldDetector.utils import LaneModelType
+from ufldDetector.exportLib.ultrafastLane.model import parsingNet
+from ufldDetector.exportLib.ultrafastLaneV2.configs.config import Config
+from ufldDetector.exportLib.ultrafastLaneV2 import model_tusimple, model_curvelanes
 from pathlib import Path
 import torch
 
@@ -55,7 +55,7 @@ def convert_model(model_path, model_type=LaneModelType.UFLDV2_CULANE):
 	onnx_file_path = file.with_suffix('.onnx')
 
 	if ( "UFLDV2" in model_type.name) :
-		cfg = LaneV2Config("./ultrafastLaneDetector/exportLib/ultrafastLaneV2/configs/"+file.stem+".py")
+		cfg = LaneV2Config("./ufldDetector/exportLib/ultrafastLaneV2/configs/"+file.stem+".py")
 		assert cfg.backbone in ['18', '34', '50', '101', '152', '50next', '101next', '50wide', '101wide']
 	else :
 		cfg = LaneV1Config(model_type)
